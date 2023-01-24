@@ -1,0 +1,4 @@
+(executable
+ (public_name diss_implementation)
+ (name main)
+ (libraries diss_implementation))

@@ -29,20 +29,24 @@ module Terms = struct
   type t =
     | Var of info * string
     | Nat of info * int
-    | Abs of info * string * Typ.t * t * t Environment.t
+    | Abs of info * string * Typ.t * t
     | App of info * t * t
     | Let of info * string * t * t
+    | Cls of t * t Environment.t
 
   let rec to_string = function
     | Var (_, name) -> name
     | Nat (_, x) -> Printf.sprintf "%d" x
-    | Abs (_, _, _, _, _) -> "<fun>"
+    (*| Abs (_, _, _, _, _) -> "<fun>"*)
+    | Abs (_, name, ty, body) ->
+       Printf.sprintf "(\\%s : %s. %s)" name (Typ.to_string ty) (to_string body)
     | App (_, t1, t2) ->
        let t1_s = to_string t1 in
        let t2_s = to_string t2 in
-       Printf.sprintf "(%s) %s" t1_s t2_s
+       Printf.sprintf "%s %s" t1_s t2_s
     | Let (_, s, t1, t2) ->
        Printf.sprintf "let %s = %s in %s" s (to_string t1) (to_string t2)
+    | Cls (abs, _) -> to_string abs
 end
 
 let binop f t1 t2 =
@@ -64,28 +68,32 @@ let rec eval env t =
   match t with
   | Terms.Var (_, name) -> (match Environment.get env name with
                      | Some x -> x
-                     | _ -> failwith "IMPLEMENT A RESOLVER")
+                     | _ -> failwith ("IMPLEMENT A RESOLVER " ^ "CAN'T FIND " ^ name))
   | Terms.Nat (_,_) as x -> x
-  | Terms.Abs (_, _, _, _, _) as x -> x
-  | Terms.App (_, Abs (_, param, _, body, env), arg) ->
+  | Terms.Abs (_, _, _, _) as x -> Terms.Cls (x, env)
+  | Terms.Cls (_, _) as x -> x
+  | Terms.App (_, Terms.Cls (Terms.Abs (_, param, _, body), closure), arg) ->
      let arg' = eval env arg in
-     let env' = Environment.createWithEnclosing env in
+     let env' = Environment.createWithEnclosing closure in
      Environment.define env' param arg';
      eval env' body
+  | Terms.App (fi, t1, t2) ->
+     let t1 = eval env t1 in
+     let t2 = eval env t2 in
+     eval env (Terms.App (fi, t1, t2))
   | Terms.Let (_, name, body, rest) ->
      let body' = eval env body in
      let env' = Environment.createWithEnclosing env in
      Environment.define env' name body';
      eval env' rest
-  | _ -> failwith "Shouldn't be possible"
 
 let rec typeof env t =
   match t with
   | Terms.Var (_, name) -> (match Environment.get env name with
                             | Some x -> x
-                            | _ -> failwith "IMPLEMENT A RESOLVER!")
+                            | _ -> failwith ("IMPLEMENT A RESOLVER! " ^ "CAN'T FIND " ^ name))
   | Terms.Nat (_, _) -> Typ.Nat
-  | Terms.Abs (_, arg, arg_type, body, _) ->
+  | Terms.Abs (_, arg, arg_type, body) ->
      let env' = Environment.createWithEnclosing env in
      Environment.define env' arg arg_type;
      let body_type = typeof env' body in
@@ -102,11 +110,13 @@ let rec typeof env t =
      let env' = Environment.createWithEnclosing env in
      Environment.define env' s bodytype;
      typeof env' term2
+  | Terms.Cls (abs, _) -> typeof env abs
      
 (* Test things - TODO add real tests*)
 
 let empty_info = { line_number = 0; column_number = 0 }
 
-let term_id = Terms.Abs (empty_info, "x", Typ.Nat, Terms.Var (empty_info, "x"), Environment.create ())
+(*let term_id = Terms.Abs (empty_info, "x", Typ.Nat, Terms.Var (empty_info, "x"), Environment.create ())
+let term_xyx = Terms.Abs (empty_info, "x", Typ.Nat, Terms.Abs (empty_info, "y", Typ.Nat, Terms.Var (empty_info, "x"), Environment.create ()), Environment.create ())
 let term1 = Terms.App (empty_info, term_id, Terms.Nat (empty_info, 5))
-let term2 = Terms.App (empty_info, term_id, term_id)
+let term2 = Terms.App (empty_info, term_id, term_id)*)

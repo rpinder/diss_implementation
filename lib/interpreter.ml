@@ -1,3 +1,5 @@
+open Base
+
 type info =
   { line_number : int
   ; column_number : int
@@ -14,6 +16,13 @@ module Typ = struct
     | (Nat, Nat) -> true
     | (Arr (x11, x12), Arr (x21, x22)) -> equal x11 x21 && equal x12 x22
     | _ -> false
+
+  let rec to_string = function
+    | Nat -> "Nat"
+    | Arr (t1, t2) ->
+       let t1_s = to_string t1 in
+       let t2_s = to_string t2 in
+       Printf.sprintf "%s -> %s" t1_s t2_s
 end
 
 module Terms = struct
@@ -22,7 +31,34 @@ module Terms = struct
     | Nat of info * int
     | Abs of info * string * Typ.t * t * t Environment.t
     | App of info * t * t
+    | Let of info * string * t * t
+
+  let rec to_string = function
+    | Var (_, name) -> name
+    | Nat (_, x) -> Printf.sprintf "%d" x
+    | Abs (_, _, _, _, _) -> "<fun>"
+    | App (_, t1, t2) ->
+       let t1_s = to_string t1 in
+       let t2_s = to_string t2 in
+       Printf.sprintf "(%s) %s" t1_s t2_s
+    | Let (_, s, t1, t2) ->
+       Printf.sprintf "let %s = %s in %s" s (to_string t1) (to_string t2)
 end
+
+let binop f t1 t2 =
+  match (t1, t2) with
+  | (Terms.Nat (fi, t1i), Terms.Nat (_, t2i)) -> Terms.Nat (fi, f t1i t2i)
+  | _ -> failwith "BINOP EXPECTS TWO NATS"
+
+(* DO SOMETHING WITH THIS *)
+let builtins =
+  let funs = [
+      ("plus", (binop (+), Typ.Arr (Typ.Nat, Typ.Arr (Typ.Nat, Typ.Nat))));
+    ]
+  in
+  match Hashtbl.of_alist (module String) funs with
+  | `Ok x -> x
+  | _ -> failwith "Problem with builtins"
 
 let rec eval env t =
   match t with
@@ -36,6 +72,11 @@ let rec eval env t =
      let env' = Environment.createWithEnclosing env in
      Environment.define env' param arg';
      eval env' body
+  | Terms.Let (_, name, body, rest) ->
+     let body' = eval env body in
+     let env' = Environment.createWithEnclosing env in
+     Environment.define env' name body';
+     eval env' rest
   | _ -> failwith "Shouldn't be possible"
 
 let rec typeof env t =
@@ -56,6 +97,11 @@ let rec typeof env t =
       | Typ.Arr (term1_arg_type, term1_body_type) when Typ.equal term2_type term1_arg_type ->
          term1_body_type
       | _ -> failwith "(include info stuff) Type Error") 
+  | Terms.Let (_, s, term1, term2) ->
+     let bodytype = typeof env term1 in
+     let env' = Environment.createWithEnclosing env in
+     Environment.define env' s bodytype;
+     typeof env' term2
      
 (* Test things - TODO add real tests*)
 

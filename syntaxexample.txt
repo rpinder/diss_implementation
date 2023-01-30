@@ -1,0 +1,25 @@
+let x = 5
+
+let add5 = \x : nat. x + 5
+
+let bring = \x : box A.
+  letbox u <= x in
+  u
+
+let rapp = \f : box (A -> B). \x : box A
+  letbox g <= f in
+  letbox y <= x in
+  box (g y)
+
+letrec pmap = \f : box (int -> int). \xs : list (box int).
+  ifz (size xs)
+    (nil)
+    (cons (bring (rapp f (head xs))) (pmap f tail xs)) 
+
+-------------
+
+(* comments *)
+let id = \x : nat. x
+
+let square = \x : nat.
+  x * x

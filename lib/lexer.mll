@@ -17,9 +17,15 @@ rule read =
   | white { read lexbuf }
   | newline { read lexbuf }
   | natlit { NATLIT (int_of_string (lexeme lexbuf)) }
+  | "true" { TRUE }
+  | "false" { FALSE }
   | "nat" { NAT }
+  | "bool" { BOOL }
   | "let" { LET }
   | "in" { IN }
+  | "if" { IF }
+  | "then" { THEN }
+  | "else" { ELSE }
   | "=" { EQUAL }
   | id { ID (lexeme lexbuf) }
   | ":" { COLON }

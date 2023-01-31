@@ -5,6 +5,7 @@ open Interpreter
 %token <int> NATLIT
 %token <string> ID
 %token NAT
+%token BOOL
 %token COLON
 %token ARROW
 %token SLASH
@@ -15,9 +16,14 @@ open Interpreter
 %token LET
 %token EQUAL
 %token IN
+%token IF
+%token THEN
+%token ELSE
+%token TRUE
+%token FALSE
 %start <Terms.t option> prog
 %nonassoc NATLIT ID BOPEN
-%right SLASH DOT LET IN
+%right SLASH DOT LET IN IF ELSE
 %left Application
 %%
 
@@ -26,16 +32,23 @@ prog:
   | t = term EOF { Some t }
   ;
 
+typ:
+  | NAT { Typ.Nat }
+  | BOOL { Typ.Bool }
+
 types:
-  | NAT; ARROW; t2 = types { Typ.Arr (Typ.Nat,t2) }
-  | NAT { Interpreter.Typ.Nat }
+  | t = typ { t }
+  | t1 = typ; ARROW; t2 = types { Typ.Arr (t1,t2) }
   ; 
 
 term:
   | i = NATLIT { Terms.Nat (empty_info, i) }
+  | TRUE { Terms.Bool (empty_info, true) }
+  | FALSE { Terms.Bool (empty_info, false) }
   | s = ID { Terms.Var (empty_info, s) }
   | SLASH; arg = ID; COLON; arg_type = types; DOT; body = term { Terms.Abs (empty_info, arg, arg_type, body) }
   | LET; s = ID; EQUAL; t1 = term; IN; t2 = term { Terms.Let (empty_info, s, t1, t2)}
   | BOPEN; t = term; BCLOSE { t }
+  | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Terms.If (empty_info, b, t1, t2)}
   | t1 = term; t2 = term; { Terms.App (empty_info, t1, t2)} %prec Application
   ;

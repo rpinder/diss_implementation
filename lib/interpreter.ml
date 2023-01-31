@@ -9,16 +9,19 @@ module Typ = struct
   type t =
     | Arr of t * t
     | Nat
+    | Bool
 
   (* TODO get [@@deriving eq] to work *)
   let rec equal t1 t2 =
     match (t1, t2) with
     | (Nat, Nat) -> true
+    | (Bool, Bool) -> true
     | (Arr (x11, x12), Arr (x21, x22)) -> equal x11 x21 && equal x12 x22
     | _ -> false
 
   let rec to_string = function
     | Nat -> "Nat"
+    | Bool -> "Bool"
     | Arr (t1, t2) ->
        let t1_s = to_string t1 in
        let t2_s = to_string t2 in
@@ -29,14 +32,17 @@ module Terms = struct
   type t =
     | Var of info * string
     | Nat of info * int
+    | Bool of info * bool
     | Abs of info * string * Typ.t * t
     | App of info * t * t
     | Let of info * string * t * t
     | Cls of t * t Environment.t
+    | If of info * t * t * t
 
   let rec to_string = function
     | Var (_, name) -> name
     | Nat (_, x) -> Printf.sprintf "%d" x
+    | Bool (_, x) -> Printf.sprintf "%b" x
     (*| Abs (_, _, _, _, _) -> "<fun>"*)
     | Abs (_, name, ty, body) ->
        Printf.sprintf "(\\%s : %s. %s)" name (Typ.to_string ty) (to_string body)
@@ -47,6 +53,8 @@ module Terms = struct
     | Let (_, s, t1, t2) ->
        Printf.sprintf "let %s = %s in %s" s (to_string t1) (to_string t2)
     | Cls (abs, _) -> to_string abs
+    | If (_, pred, t1, t2) ->
+       Printf.sprintf "if %s then %s else %s" (to_string pred) (to_string t1) (to_string t2)
 end
 
 let binop f t1 t2 =
@@ -70,6 +78,7 @@ let rec eval env t =
                      | Some x -> x
                      | _ -> failwith ("IMPLEMENT A RESOLVER " ^ "CAN'T FIND " ^ name))
   | Terms.Nat (_,_) as x -> x
+  | Terms.Bool (_,_) as x -> x
   | Terms.Abs (_, _, _, _) as x -> Terms.Cls (x, env)
   | Terms.Cls (_, _) as x -> x
   | Terms.App (_, Terms.Cls (Terms.Abs (_, param, _, body), closure), arg) ->
@@ -86,6 +95,16 @@ let rec eval env t =
      let env' = Environment.createWithEnclosing env in
      Environment.define env' name body';
      eval env' rest
+  | Terms.If (fi, predicate, true_term, false_term) ->
+     match predicate with
+     | Terms.Bool (_, b) ->
+        eval env (if b then true_term else false_term)
+     | pred ->
+        let pred' = eval env pred in
+        eval env (Terms.If (fi, pred', true_term, false_term))
+
+        
+                          
 
 let rec typeof env t =
   match t with
@@ -93,6 +112,7 @@ let rec typeof env t =
                             | Some x -> x
                             | _ -> failwith ("IMPLEMENT A RESOLVER! " ^ "CAN'T FIND " ^ name))
   | Terms.Nat (_, _) -> Typ.Nat
+  | Terms.Bool (_, _) -> Typ.Bool
   | Terms.Abs (_, arg, arg_type, body) ->
      let env' = Environment.createWithEnclosing env in
      Environment.define env' arg arg_type;
@@ -111,6 +131,17 @@ let rec typeof env t =
      Environment.define env' s bodytype;
      typeof env' term2
   | Terms.Cls (abs, _) -> typeof env abs
+  | Terms.If (_, predicate, t1, t2) ->
+     let pred_type = typeof env predicate in
+     let t1_type = typeof env t1 in
+     let t2_type = typeof env t2 in
+     if not (Typ.equal pred_type Typ.Bool) then
+       failwith "predicate must be of type Bool"
+     else
+       if not (Typ.equal t1_type t2_type) then
+         failwith "operands should be same type"
+       else
+         t1_type
      
 (* Test things - TODO add real tests*)
 

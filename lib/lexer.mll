@@ -39,5 +39,11 @@ rule read =
   | "+" { PLUS }
   | "-" { MINUS }
   | "*" { MULTIPLY }
+  | "(*" { comment lexbuf; read lexbuf }
   | _ { raise (SyntaxError ("Unexpected token")) }
   | eof { EOF }
+and comment =
+  parse
+  | "*)" { () }
+  | _ { comment lexbuf }
+  | eof { () }

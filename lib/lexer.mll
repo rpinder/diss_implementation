@@ -22,6 +22,7 @@ rule read =
   | "nat" { NAT }
   | "bool" { BOOL }
   | "let" { LET }
+  | "rec" { REC }
   | "in" { IN }
   | "if" { IF }
   | "then" { THEN }

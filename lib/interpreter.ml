@@ -36,6 +36,7 @@ module Terms = struct
     | Abs of info * string * Typ.t * t
     | App of info * t * t
     | Let of info * string * t * t
+    | LetRec of info * string * Typ.t * t * t
     | Cls of t * t Environment.t
     | If of info * t * t * t
     | BinOp of info * t * t * op
@@ -64,6 +65,7 @@ module Terms = struct
        Printf.sprintf "%s %s" t1_s t2_s
     | Let (_, s, t1, t2) ->
        Printf.sprintf "let %s = %s in %s" s (to_string t1) (to_string t2)
+    | LetRec (_, _, _, _,_) -> Printf.sprintf "<letrec>"
     | Cls (abs, _) -> to_string abs
     | If (_, pred, t1, t2) ->
        Printf.sprintf "if %s then %s else %s" (to_string pred) (to_string t1) (to_string t2)
@@ -116,6 +118,12 @@ let rec eval env t =
      let env' = Environment.createWithEnclosing env in
      Environment.define env' name body';
      eval env' rest
+  | Terms.LetRec (_, name, _, body, rest) ->
+     let env' = Environment.createWithEnclosing env in
+     Environment.define env' name body;
+     let body' = eval env' body in
+     Environment.define env' name body';
+     eval env' rest
   | Terms.If (fi, predicate, true_term, false_term) ->
      (match predicate with
      | Terms.Bool (_, b) ->
@@ -164,6 +172,14 @@ let rec typeof env t =
      let env' = Environment.createWithEnclosing env in
      Environment.define env' s bodytype;
      typeof env' term2
+  | Terms.LetRec (_, s, arg_type, term1, term2) ->
+     let env' = Environment.createWithEnclosing env in
+     Environment.define env' s  arg_type;
+     let bodytype = typeof env' term1 in
+     if not (Typ.equal bodytype arg_type) then
+       failwith "Type Error, bodytype not equal arg_type"
+     else 
+       typeof env' term2
   | Terms.Cls (abs, _) -> typeof env abs
   | Terms.If (_, predicate, t1, t2) ->
      let pred_type = typeof env predicate in

@@ -25,6 +25,7 @@ open Interpreter
 %token MINUS
 %token MULTIPLY
 %token EQUALITY
+%token REC
 %start <Terms.t option> prog
 %nonassoc NATLIT ID BOPEN
 %right SLASH DOT LET IN IF ELSE
@@ -58,6 +59,7 @@ term:
   | s = ID { Terms.Var (empty_info, s) }
   | SLASH; arg = ID; COLON; arg_type = types; DOT; body = term { Terms.Abs (empty_info, arg, arg_type, body) }
   | LET; s = ID; EQUAL; t1 = term; IN; t2 = term { Terms.Let (empty_info, s, t1, t2)}
+  | LET; REC; s = ID; COLON; typ = types; EQUAL; t1 = term; IN; t2 = term { Terms.LetRec (empty_info, s, typ, t1, t2)}
   | BOPEN; t = term; BCLOSE { t }
   | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Terms.If (empty_info, b, t1, t2)}
   | t1 = term; t2 = term; { Terms.App (empty_info, t1, t2)} %prec Application

@@ -1,4 +1,10 @@
-let rec fact : int -> int = \x : int.
-  if x == 0 then 1 else x * fact (x - 1)
+let rec fib : int -> int = \x : int.
+  if x == 0 then
+    0
+  else
+    if x == 1 then
+      1
+    else
+      (fib (x - 1)) + (fib (x - 2))
 in
-fact 5
+fib 10

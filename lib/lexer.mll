@@ -9,17 +9,17 @@ exception SyntaxError of string
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 
-let natlit = ['0'-'9'] ['0'-'9']*
+let intlit = ['0'-'9'] ['0'-'9']*
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 rule read =
   parse
   | white { read lexbuf }
   | newline { read lexbuf }
-  | natlit { NATLIT (int_of_string (lexeme lexbuf)) }
+  | intlit { INTLIT (int_of_string (lexeme lexbuf)) }
   | "true" { TRUE }
   | "false" { FALSE }
-  | "nat" { NAT }
+  | "int" { INT }
   | "bool" { BOOL }
   | "let" { LET }
   | "rec" { REC }

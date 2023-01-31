@@ -2,9 +2,9 @@
 open Interpreter
 %}
 
-%token <int> NATLIT
+%token <int> INTLIT
 %token <string> ID
-%token NAT
+%token INT
 %token BOOL
 %token COLON
 %token ARROW
@@ -27,7 +27,7 @@ open Interpreter
 %token EQUALITY
 %token REC
 %start <Terms.t option> prog
-%nonassoc NATLIT ID BOPEN
+%nonassoc INTLIT ID BOPEN
 %right SLASH DOT LET IN IF ELSE
 %left Application
 %%
@@ -38,7 +38,7 @@ prog:
   ;
 
 typ:
-  | NAT { Typ.Nat }
+  | INT { Typ.Int }
   | BOOL { Typ.Bool }
 
 types:
@@ -51,7 +51,7 @@ binop:
   | MULTIPLY { Terms.Multiply }
 
 term:
-  | i = NATLIT { Terms.Nat (empty_info, i) }
+  | i = INTLIT { Terms.Int (empty_info, i) }
   | t1 = term; EQUALITY; t2 = term { Terms.Eq (empty_info, t1, t2)}
   | t1 = term; op = binop; t2 = term { Terms.BinOp (empty_info, t1, t2, op)}
   | TRUE { Terms.Bool (empty_info, true) }

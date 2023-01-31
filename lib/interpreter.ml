@@ -8,20 +8,20 @@ type info =
 module Typ = struct
   type t =
     | Arr of t * t
-    | Nat
+    | Int
     | Bool
 
   (* TODO get [@@deriving eq] to work *)
   let rec equal t1 t2 =
     match (t1, t2) with
-    | (Nat, Nat) -> true
+    | (Int, Int) -> true
     | (Bool, Bool) -> true
     | (Arr (x11, x12), Arr (x21, x22)) -> equal x11 x21 && equal x12 x22
     | _ -> false
 
   let rec to_string = function
-    | Nat -> "Nat"
-    | Bool -> "Bool"
+    | Int -> "int"
+    | Bool -> "bool"
     | Arr (t1, t2) ->
        let t1_s = to_string t1 in
        let t2_s = to_string t2 in
@@ -31,7 +31,7 @@ end
 module Terms = struct
   type t =
     | Var of info * string
-    | Nat of info * int
+    | Int of info * int
     | Bool of info * bool
     | Abs of info * string * Typ.t * t
     | App of info * t * t
@@ -48,13 +48,13 @@ module Terms = struct
 
   let equal t1 t2 =
     match (t1, t2) with
-    | (Nat (_, x), Nat (_, y)) -> x = y
+    | (Int (_, x), Int (_, y)) -> x = y
     | (Bool (_, x), Bool (_, y)) -> Bool.(=) x y
     | _ -> false
 
   let rec to_string = function
     | Var (_, name) -> name
-    | Nat (_, x) -> Printf.sprintf "%d" x
+    | Int (_, x) -> Printf.sprintf "%d" x
     | Bool (_, x) -> Printf.sprintf "%b" x
     (*| Abs (_, _, _, _, _) -> "<fun>"*)
     | Abs (_, name, ty, body) ->
@@ -100,7 +100,7 @@ let rec eval env t =
   | Terms.Var (_, name) -> (match Environment.get env name with
                      | Some x -> x
                      | _ -> failwith ("IMPLEMENT A RESOLVER " ^ "CAN'T FIND " ^ name))
-  | Terms.Nat (_,_) as x -> x
+  | Terms.Int (_,_) as x -> x
   | Terms.Bool (_,_) as x -> x
   | Terms.Abs (_, _, _, _) as x -> Terms.Cls (x, env)
   | Terms.Cls (_, _) as x -> x
@@ -136,7 +136,7 @@ let rec eval env t =
      let t2' = eval env t2 in
      let f = eval_operator op in
      (match (t1', t2') with
-     | (Terms.Nat (fi, x), Terms.Nat (_, y)) -> Terms.Nat (fi, f x y)
+     | (Terms.Int (fi, x), Terms.Int (_, y)) -> Terms.Int (fi, f x y)
      | _ -> failwith "Error")
   | Terms.Eq (fi, t1, t2) ->
      let t1' = eval env t1 in
@@ -153,7 +153,7 @@ let rec typeof env t =
   | Terms.Var (_, name) -> (match Environment.get env name with
                             | Some x -> x
                             | _ -> failwith ("IMPLEMENT A RESOLVER! " ^ "CAN'T FIND " ^ name))
-  | Terms.Nat (_, _) -> Typ.Nat
+  | Terms.Int (_, _) -> Typ.Int
   | Terms.Bool (_, _) -> Typ.Bool
   | Terms.Abs (_, arg, arg_type, body) ->
      let env' = Environment.createWithEnclosing env in
@@ -195,10 +195,10 @@ let rec typeof env t =
   | Terms.BinOp (_, t1, t2, _) ->
      let t1_type = typeof env t1 in
      let t2_type = typeof env t2 in
-     if not (Typ.equal t1_type t2_type && Typ.equal t1_type Typ.Nat) then
+     if not (Typ.equal t1_type t2_type && Typ.equal t1_type Typ.Int) then
        failwith "TypeError"
      else
-       Typ.Nat
+       Typ.Int
   | Terms.Eq (_, t1, t2) ->
      let t1_type = typeof env t1 in
      let t2_type = typeof env t2 in

@@ -21,6 +21,10 @@ open Interpreter
 %token ELSE
 %token TRUE
 %token FALSE
+%token PLUS
+%token MINUS
+%token MULTIPLY
+%token EQUALITY
 %start <Terms.t option> prog
 %nonassoc NATLIT ID BOPEN
 %right SLASH DOT LET IN IF ELSE
@@ -39,10 +43,16 @@ typ:
 types:
   | t = typ { t }
   | t1 = typ; ARROW; t2 = types { Typ.Arr (t1,t2) }
-  ; 
+
+binop:
+  | PLUS { Terms.Plus }
+  | MINUS { Terms.Minus }
+  | MULTIPLY { Terms.Multiply }
 
 term:
   | i = NATLIT { Terms.Nat (empty_info, i) }
+  | t1 = term; EQUALITY; t2 = term { Terms.Eq (empty_info, t1, t2)}
+  | t1 = term; op = binop; t2 = term { Terms.BinOp (empty_info, t1, t2, op)}
   | TRUE { Terms.Bool (empty_info, true) }
   | FALSE { Terms.Bool (empty_info, false) }
   | s = ID { Terms.Var (empty_info, s) }

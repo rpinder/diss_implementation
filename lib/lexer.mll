@@ -26,6 +26,7 @@ rule read =
   | "if" { IF }
   | "then" { THEN }
   | "else" { ELSE }
+  | "==" { EQUALITY }
   | "=" { EQUAL }
   | id { ID (lexeme lexbuf) }
   | ":" { COLON }
@@ -34,5 +35,8 @@ rule read =
   | "." { DOT }
   | "(" { BOPEN }
   | ")" { BCLOSE }
+  | "+" { PLUS }
+  | "-" { MINUS }
+  | "*" { MULTIPLY }
   | _ { raise (SyntaxError ("Unexpected token")) }
   | eof { EOF }

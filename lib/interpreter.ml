@@ -38,6 +38,18 @@ module Terms = struct
     | Let of info * string * t * t
     | Cls of t * t Environment.t
     | If of info * t * t * t
+    | BinOp of info * t * t * op
+    | Eq of info * t * t
+  and op =
+    | Plus
+    | Minus
+    | Multiply
+
+  let equal t1 t2 =
+    match (t1, t2) with
+    | (Nat (_, x), Nat (_, y)) -> x = y
+    | (Bool (_, x), Bool (_, y)) -> Bool.(=) x y
+    | _ -> false
 
   let rec to_string = function
     | Var (_, name) -> name
@@ -55,9 +67,11 @@ module Terms = struct
     | Cls (abs, _) -> to_string abs
     | If (_, pred, t1, t2) ->
        Printf.sprintf "if %s then %s else %s" (to_string pred) (to_string t1) (to_string t2)
+    | BinOp (_, t1, t2, _) -> Printf.sprintf "%s <op> %s" (to_string t1) (to_string t2)
+    | Eq (_, t1, t2) -> Printf.sprintf "%s == %s" (to_string t1) (to_string t2)
 end
 
-let binop f t1 t2 =
+(*let binop f t1 t2 =
   match (t1, t2) with
   | (Terms.Nat (fi, t1i), Terms.Nat (_, t2i)) -> Terms.Nat (fi, f t1i t2i)
   | _ -> failwith "BINOP EXPECTS TWO NATS"
@@ -71,6 +85,13 @@ let builtins =
   match Hashtbl.of_alist (module String) funs with
   | `Ok x -> x
   | _ -> failwith "Problem with builtins"
+ *) 
+
+let eval_operator op =
+  match op with
+  | Terms.Plus -> (+)
+  | Terms.Minus -> (-)
+  | Terms.Multiply -> ( * )
 
 let rec eval env t =
   match t with
@@ -96,15 +117,28 @@ let rec eval env t =
      Environment.define env' name body';
      eval env' rest
   | Terms.If (fi, predicate, true_term, false_term) ->
-     match predicate with
+     (match predicate with
      | Terms.Bool (_, b) ->
         eval env (if b then true_term else false_term)
      | pred ->
         let pred' = eval env pred in
-        eval env (Terms.If (fi, pred', true_term, false_term))
+        eval env (Terms.If (fi, pred', true_term, false_term)))
+  | Terms.BinOp (_, t1, t2, op) ->
+     let t1' = eval env t1 in
+     let t2' = eval env t2 in
+     let f = eval_operator op in
+     (match (t1', t2') with
+     | (Terms.Nat (fi, x), Terms.Nat (_, y)) -> Terms.Nat (fi, f x y)
+     | _ -> failwith "Error")
+  | Terms.Eq (fi, t1, t2) ->
+     let t1' = eval env t1 in
+     let t2' = eval env t2 in
+     if Terms.equal t1' t2' then
+       Terms.Bool (fi, true)
+     else
+       Terms.Bool (fi, false)
 
-        
-                          
+     
 
 let rec typeof env t =
   match t with
@@ -142,7 +176,21 @@ let rec typeof env t =
          failwith "operands should be same type"
        else
          t1_type
-     
+  | Terms.BinOp (_, t1, t2, _) ->
+     let t1_type = typeof env t1 in
+     let t2_type = typeof env t2 in
+     if not (Typ.equal t1_type t2_type && Typ.equal t1_type Typ.Nat) then
+       failwith "TypeError"
+     else
+       Typ.Nat
+  | Terms.Eq (_, t1, t2) ->
+     let t1_type = typeof env t1 in
+     let t2_type = typeof env t2 in
+     if Typ.equal t1_type t2_type then
+       Typ.Bool
+     else
+       failwith "TypeError"
+
 (* Test things - TODO add real tests*)
 
 let empty_info = { line_number = 0; column_number = 0 }

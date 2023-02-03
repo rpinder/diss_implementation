@@ -25,13 +25,19 @@ open Interpreter
 %token MINUS
 %token MULTIPLY
 %token EQUALITY
+%token LESSTHAN
+%token GREATERTHAN
+%token GTEQ
+%token LTEQ
+%token NOTEQUALITY
 %token REC
 
 %token APP
 
 %right IN
 %nonassoc ELSE
-%left EQUALITY
+%left EQUALITY NOTEQUALITY
+%left LESSTHAN GREATERTHAN GTEQ LTEQ
 %left PLUS MINUS
 %left MULTIPLY
 %nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF DOT
@@ -62,11 +68,16 @@ types:
   | PLUS { Terms.Plus }
   | MINUS { Terms.Minus }
   | MULTIPLY { Terms.Multiply }
+  | LESSTHAN { Terms.LessThan }
+  | GREATERTHAN { Terms.GreaterThan }
+  | LTEQ { Terms.LTEQ }
+  | GTEQ { Terms.GTEQ }
 
 term:
   | t1 = term; op = binop; t2 = term { Terms.BinOp (empty_info, t1, t2, op)}
   | i = INTLIT { Terms.Int (empty_info, i) }
   | t1 = term; EQUALITY; t2 = term { Terms.Eq (empty_info, t1, t2)}
+  | t1 = term; NOTEQUALITY; t2 = term { Terms.NEq (empty_info, t1, t2)}
   | TRUE { Terms.Bool (empty_info, true) }
   | FALSE { Terms.Bool (empty_info, false) }
   | s = ID { Terms.Var (empty_info, s) }

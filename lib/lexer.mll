@@ -28,6 +28,11 @@ rule read =
   | "then" { THEN }
   | "else" { ELSE }
   | "==" { EQUALITY }
+  | "!=" { NOTEQUALITY }
+  | ">" { GREATERTHAN }
+  | "<" { LESSTHAN }
+  | ">=" { GTEQ }
+  | "<=" { LTEQ }
   | "=" { EQUAL }
   | id { ID (lexeme lexbuf) }
   | ":" { COLON }

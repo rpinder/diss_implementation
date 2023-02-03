@@ -41,10 +41,15 @@ module Terms = struct
     | If of info * t * t * t
     | BinOp of info * t * t * op
     | Eq of info * t * t
+    | NEq of info * t * t
   and op =
     | Plus
     | Minus
     | Multiply
+    | LessThan
+    | GreaterThan
+    | LTEQ
+    | GTEQ
 
   let equal t1 t2 =
     match (t1, t2) with
@@ -70,6 +75,7 @@ module Terms = struct
        Printf.sprintf "(if %s then %s else %s)" (to_string pred) (to_string t1) (to_string t2)
     | BinOp (_, t1, t2, _) -> Printf.sprintf "(%s <op> %s)" (to_string t1) (to_string t2)
     | Eq (_, t1, t2) -> Printf.sprintf "(%s == %s)" (to_string t1) (to_string t2)
+    | NEq (_, t1, t2) -> Printf.sprintf "(%s != %s)" (to_string t1) (to_string t2)
 end
 
 (*let binop f t1 t2 =
@@ -88,11 +94,18 @@ let builtins =
   | _ -> failwith "Problem with builtins"
  *) 
 
-let eval_operator op =
+let eval_operator op fi =
+  let createint x = Terms.Int (fi, x) in
+  let createbool x = Terms.Bool (fi, x) in
+  fun x y ->
   match op with
-  | Terms.Plus -> (+)
-  | Terms.Minus -> (-)
-  | Terms.Multiply -> ( * )
+  | Terms.Plus -> createint (x + y)
+  | Terms.Minus -> createint (x - y)
+  | Terms.Multiply -> createint (x * y)
+  | Terms.LessThan -> createbool (x < y)
+  | Terms.GreaterThan -> createbool (x > y)
+  | Terms.LTEQ -> createbool (x <= y)
+  | Terms.GTEQ -> createbool (x >= y)
 
 let rec eval env t =
   match t with
@@ -133,9 +146,8 @@ let rec eval env t =
   | Terms.BinOp (_, t1, t2, op) ->
      let t1' = eval env t1 in
      let t2' = eval env t2 in
-     let f = eval_operator op in
      (match (t1', t2') with
-     | (Terms.Int (fi, x), Terms.Int (_, y)) -> Terms.Int (fi, f x y)
+     | (Terms.Int (fi, x), Terms.Int (_, y)) -> eval_operator op fi x y
      | _ -> failwith "Error")
   | Terms.Eq (fi, t1, t2) ->
      let t1' = eval env t1 in
@@ -144,6 +156,13 @@ let rec eval env t =
        Terms.Bool (fi, true)
      else
        Terms.Bool (fi, false)
+  | Terms.NEq (fi, t1, t2) ->
+     let t1' = eval env t1 in
+     let t2' = eval env t2 in
+     if Terms.equal t1' t2' then
+       Terms.Bool (fi, false)
+     else
+       Terms.Bool (fi, true)
 
      
 
@@ -205,6 +224,7 @@ let rec typeof env t =
        Typ.Bool
      else
        failwith "TypeError"
+  | Terms.NEq (fi, t1, t2) -> typeof env (Terms.Eq (fi, t1, t2))
 
 (* Test things - TODO add real tests*)
 

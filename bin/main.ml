@@ -23,6 +23,7 @@ let run file =
   let lexbuf = Lexing.from_channel inx in
   match Parser.prog Lexer.read lexbuf with
   | Some t -> 
+     Out_channel.output_string stdout (Interpreter.Terms.to_string t ^ "\n");
      let typeof = Interpreter.typeof (Environment.create ()) t in
      let t' = Interpreter.eval (Environment.create ()) t in
      let str = ((Interpreter.Terms.to_string t') ^ "\n" ^ (Interpreter.Typ.to_string typeof)) in

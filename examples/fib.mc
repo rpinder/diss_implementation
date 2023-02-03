@@ -5,6 +5,6 @@ let rec fib : int -> int = \x : int.
     if x == 1 then
       1
     else
-      (fib (x - 1)) + (fib (x - 2))
+      fib (x - 1) + fib (x - 2)
 in
 fib 10

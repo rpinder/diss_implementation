@@ -1,0 +1,5 @@
+let id = \x : int. x in
+let fib = \x : int.
+  id (x - 1) + id (x - 2)
+in fib 10
+  

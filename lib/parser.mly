@@ -26,10 +26,23 @@ open Interpreter
 %token MULTIPLY
 %token EQUALITY
 %token REC
+
+%token APP
+
+%right IN
+%nonassoc ELSE
+%left EQUALITY
+%left PLUS MINUS
+%left MULTIPLY
+%nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF DOT
+%nonassoc APP
+
 %start <Terms.t option> prog
-%nonassoc INTLIT ID BOPEN
-%right SLASH DOT LET IN IF ELSE
-%left Application
+
+%type <Terms.t> term
+%type <Typ.t> typ
+%type <Typ.t> types
+
 %%
 
 prog:
@@ -45,15 +58,15 @@ types:
   | t = typ { t }
   | t1 = typ; ARROW; t2 = types { Typ.Arr (t1,t2) }
 
-binop:
+%inline binop:
   | PLUS { Terms.Plus }
   | MINUS { Terms.Minus }
   | MULTIPLY { Terms.Multiply }
 
 term:
+  | t1 = term; op = binop; t2 = term { Terms.BinOp (empty_info, t1, t2, op)}
   | i = INTLIT { Terms.Int (empty_info, i) }
   | t1 = term; EQUALITY; t2 = term { Terms.Eq (empty_info, t1, t2)}
-  | t1 = term; op = binop; t2 = term { Terms.BinOp (empty_info, t1, t2, op)}
   | TRUE { Terms.Bool (empty_info, true) }
   | FALSE { Terms.Bool (empty_info, false) }
   | s = ID { Terms.Var (empty_info, s) }
@@ -62,5 +75,7 @@ term:
   | LET; REC; s = ID; COLON; typ = types; EQUAL; t1 = term; IN; t2 = term { Terms.LetRec (empty_info, s, typ, t1, t2)}
   | BOPEN; t = term; BCLOSE { t }
   | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Terms.If (empty_info, b, t1, t2)}
-  | t1 = term; t2 = term; { Terms.App (empty_info, t1, t2)} %prec Application
+  | t1 = term; t2 = term %prec APP { Terms.App (empty_info, t1, t2)}
   ;
+
+

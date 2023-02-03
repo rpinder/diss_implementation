@@ -56,21 +56,20 @@ module Terms = struct
     | Var (_, name) -> name
     | Int (_, x) -> Printf.sprintf "%d" x
     | Bool (_, x) -> Printf.sprintf "%b" x
-    (*| Abs (_, _, _, _, _) -> "<fun>"*)
     | Abs (_, name, ty, body) ->
        Printf.sprintf "(\\%s : %s. %s)" name (Typ.to_string ty) (to_string body)
     | App (_, t1, t2) ->
        let t1_s = to_string t1 in
        let t2_s = to_string t2 in
-       Printf.sprintf "%s %s" t1_s t2_s
+       Printf.sprintf "(%s %s)" t1_s t2_s
     | Let (_, s, t1, t2) ->
-       Printf.sprintf "let %s = %s in %s" s (to_string t1) (to_string t2)
-    | LetRec (_, _, _, _,_) -> Printf.sprintf "<letrec>"
+       Printf.sprintf "(let %s = %s in %s)" s (to_string t1) (to_string t2)
+    | LetRec (_, s, typ, t1,t2) -> Printf.sprintf "(let %s : %s = %s in %s)" s (Typ.to_string typ) (to_string t1) (to_string t2)
     | Cls (abs, _) -> to_string abs
     | If (_, pred, t1, t2) ->
-       Printf.sprintf "if %s then %s else %s" (to_string pred) (to_string t1) (to_string t2)
-    | BinOp (_, t1, t2, _) -> Printf.sprintf "%s <op> %s" (to_string t1) (to_string t2)
-    | Eq (_, t1, t2) -> Printf.sprintf "%s == %s" (to_string t1) (to_string t2)
+       Printf.sprintf "(if %s then %s else %s)" (to_string pred) (to_string t1) (to_string t2)
+    | BinOp (_, t1, t2, _) -> Printf.sprintf "(%s <op> %s)" (to_string t1) (to_string t2)
+    | Eq (_, t1, t2) -> Printf.sprintf "(%s == %s)" (to_string t1) (to_string t2)
 end
 
 (*let binop f t1 t2 =

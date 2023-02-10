@@ -24,3 +24,6 @@ let id = \x : nat. x
 
 let square = \x : nat.
   x * x
+
+
+type list 'a = nil | cons of 'a * list 'a

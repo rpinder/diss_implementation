@@ -5,4 +5,5 @@
 
 (library
  (name diss_implementation)
+ (preprocess (pps ppx_jane))
  (libraries core))

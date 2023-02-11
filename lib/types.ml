@@ -25,6 +25,7 @@ module Typ = struct
     | Var of Var.t
     | Con of string
     | Arr of t * t
+  [@@deriving equal]
 
   let rec to_string = function
     | Var (V s) -> s
@@ -83,6 +84,7 @@ let env_ftv (env : typeenv) : (Var.t, Var.comparator_witness) Set.t =
 let env_apply (s : subst) env =
   Map.map env ~f:(scheme_apply s)
 
+
 let generalise (env : typeenv) (t : Typ.t) : scheme =
   let diff = Set.diff (type_ftv t) (env_ftv env) in
   Forall (Set.to_list diff, t)
@@ -98,59 +100,115 @@ let var_bind v t =
   | (Typ.Var v') when Var.equal v' v -> emptysubst
   | _ when Set.mem (type_ftv t) v -> raise (TypeError "Occurs check fails")
   | _ -> Map.singleton (module Var) v t
-
-let rec mgu (t1 : Typ.t) (t2 : Typ.t) : subst =
-  match (t1, t2) with
-  | (Typ.Arr (l, r)), (Typ.Arr (l', r')) ->
-     let s1 = mgu l l' in
-     let s2 = mgu (type_apply s1 r) (type_apply s1 r') in
-     compose_subst s1 s2
-  | (Typ.Var u, t) | (t, Typ.Var u)-> var_bind u t
-  | (Typ.Con s1), (Typ.Con s2) when String.(=) s1 s2 -> emptysubst
-  | _ -> raise (TypeError ("types do not unify: " ^ (Typ.to_string t1) ^ " and " ^ (Typ.to_string t2)))
-
-let infer_lit l =
-  let t = match l with
-    | LInt _ -> "int"
-    | LBool _ -> "bool"
-  in
-  (emptysubst, Typ.Con t)
-
-let rec infer (env : typeenv) (ex : expr) : subst * Typ.t =
-  match ex with
-  | Var n ->
-     let (V s) = n in
-     (match Map.find env n with
-      | None -> raise (TypeError ("unbound variable: " ^ s))
-      | Some sigma ->
-         let t = instantiate sigma in
-         (emptysubst, t))
-  | Lit l -> infer_lit l
-  | Lam (n, e) ->
-     let tv = Fresh.gen () in
-     let env' = Map.remove env n in
-     let env'' = Map.add_exn env' ~key:n ~data:(Forall ([], tv)) in
-     let (s1, t1) = infer env'' e in
-     (s1, Typ.Arr (type_apply s1 tv, t1))
-  | App (e1, e2) ->
-     let tv = Fresh.gen () in
-     let (s1, t1) = infer env e1 in
-     let (s2, t2) = infer (env_apply s1 env) e2 in
-     let s3 = mgu (type_apply s2 t1) (Typ.Arr (t2, tv)) in
-     (compose_subst s3 (compose_subst s2 s1), type_apply s3 tv)
-  | Let (x, e1, e2) ->
-     let (s1, t1) = infer env e1 in
-     let env' = Map.remove env x in
-     let t' = generalise (env_apply s1 env) t1 in
-     let env'' = Map.add_exn env' ~key:x ~data:t' in
-     let (s2, t2) = infer (env_apply s1 env'') e2 in
-     (compose_subst s1 s2, t2)
-
-let type_inference env e =
-  let (s, t) = infer env e in
-  type_apply s t
-
 let e0 = Let ((V "id"), Lam (V "x", Var (V "x")), Var (V "id"))
 
-let test ex =
-  Typ.to_string (type_inference (Map.empty (module Var)) ex)
+let lookupEnv env (var : Var.t) =
+  let (V s) = var in
+  match Map.find env var with
+  | None -> raise (TypeError ("UnboundVariable: " ^ s))
+  | Some sigma ->
+     let t = instantiate sigma in
+     t
+
+module Inference : sig
+  type t
+
+  val create : unit -> t
+  val add_constraint : t -> (Typ.t * Typ.t) -> unit
+  val infer : t -> typeenv -> expr -> Typ.t
+  val unifies : Typ.t -> Typ.t -> subst * (Typ.t * Typ.t) list
+  val typeof : expr -> Typ.t
+end = struct
+    type t = {
+        mutable constraints : (Typ.t * Typ.t) list
+      }
+
+    let create () = { constraints = [] }
+
+    let add_constraint t con = 
+      let constraints' = con :: t.constraints in
+      t.constraints <- constraints'
+
+    let rec infer t env ex =
+      match ex with
+      | Lit (LInt _) -> Typ.Con "int"
+      | Lit (LBool _) -> Typ.Con "bool"
+      | Var x -> lookupEnv env x
+      | Lam (x, e) ->
+         let tv = Fresh.gen () in
+         let env' = Map.add_exn env ~key:x ~data:(Forall ([], tv)) in
+         let t = infer t env' e in
+         Typ.Arr (tv, t)
+      | App (e1, e2) ->
+         let t1 = infer t env e1 in
+         let t2 = infer t env e2 in
+         let tv = Fresh.gen () in
+         add_constraint t (t1, Typ.Arr (t2, tv));
+         tv
+      | Let (x, e1, e2) ->
+         let t1 = infer t env e1 in
+         let sc = generalise env t1 in
+         let env' = Map.add_exn env ~key:x ~data:sc in
+         let t2 = infer t env' e2 in
+         t2
+
+    type constra = Typ.t * Typ.t
+    type unifier = subst * constra list
+
+    let list_type_apply (s : subst) (xs : Typ.t list) =
+      List.map xs ~f:(type_apply s)
+
+    let constraint_apply (s : subst) ((t1, t2) : constra) : constra = (type_apply s t1, type_apply s t2)
+
+    let list_constraint_apply (s : subst) (xs : constra list) : constra list =
+      List.map xs ~f:(constraint_apply s)
+
+    let rec unifies t1 t2 : unifier =
+      match (t1, t2) with
+      | (t1, t2) when Typ.equal t1 t2 -> emptysubst, []
+      | (Typ.Var v, t) -> var_bind v t, []
+      | (t, Typ.Var v) -> var_bind v t, []
+      | (Typ.Arr (t1, t2), Typ.Arr (t3, t4)) -> unify_list [t1; t2] [t3; t4]
+      | _ -> raise (TypeError "Unification failed")
+    and unify_list l1 l2 : unifier =
+      match (l1, l2) with
+      | [], [] -> emptysubst, []
+      | t1::ts1, t2::ts2 ->
+         let (su1, cs1) = unifies t1 t2 in
+         let (su2, cs2) = unify_list (list_type_apply su1 ts1) (list_type_apply su1 ts2) in
+         (compose_subst su2 su1, cs1 @ cs2)
+      | _ -> raise (TypeError "Unification Mismatch")
+
+    let rec solver (u : unifier) =
+      let (su, cs) = u in
+      match cs with
+      | [] -> su
+      | ((t1, t2) :: cs0) ->
+         let (su1, cs1) = unifies t1 t2 in
+         solver (compose_subst su1 su, cs1 @ (list_constraint_apply su1 cs0))
+
+    (* change this to support any number *)
+    let letters = ["a";"b";"c";"d";"e";"f";"g";"h";"i";"j";"k";"l";"m";"n";"o";"p";"q";"r";"s";"t";"u";"v";"w";"x";"y";"z"]
+
+    let normalise ((Forall (_, body)) : scheme) : scheme =
+      let ord = List.mapi (Set.to_list (type_ftv body)) ~f:(fun i x -> (x, List.nth_exn letters i)) in
+      let rec normtype = function
+        | Typ.Arr (t1, t2) -> Typ.Arr (normtype t1, normtype t2)
+        | Typ.Con _ as x -> x
+        | Typ.Var a ->
+           (match Caml.List.assoc_opt a ord with
+            | Some x -> Typ.Var (V x)
+            | None -> raise (TypeError "type variable not in signature"))
+      in
+      Forall (List.map ord ~f:(fun x -> Var.V (snd x)), normtype body)
+
+    let typeof (ex : expr) : Typ.t =
+      let env = Map.empty (module Var) in
+      let t = create () in
+      let typ = infer t env ex in
+      let subst = solver (emptysubst, t.constraints) in
+      let Forall (_, body) = normalise (generalise env (type_apply subst typ))
+      in body
+
+
+  end

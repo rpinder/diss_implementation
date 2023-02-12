@@ -10,9 +10,9 @@ let rec loop () =
   in
   (match Parsing.attempt s with
   | Some t ->
-     let typeof = Interpreter.typeof (Environment.create ()) t in
+     let typeof = Types.Inference.typeof t in
      let t' = Interpreter.eval (Environment.create ()) t in
-     let str = ((Interpreter.Terms.to_string t') ^ "\n" ^ (Interpreter.Typ.to_string typeof)) in
+     let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
      
      Out_channel.output_string stdout (str ^ "\n");
   | None -> ());
@@ -23,10 +23,10 @@ let run file =
   let lexbuf = Lexing.from_channel inx in
   match Parser.prog Lexer.read lexbuf with
   | Some t -> 
-     Out_channel.output_string stdout (Interpreter.Terms.to_string t ^ "\n");
-     let typeof = Interpreter.typeof (Environment.create ()) t in
+     Out_channel.output_string stdout (Ast.to_string t ^ "\n");
+     let typeof = Types.Inference.typeof  t in
      let t' = Interpreter.eval (Environment.create ()) t in
-     let str = ((Interpreter.Terms.to_string t') ^ "\n" ^ (Interpreter.Typ.to_string typeof)) in
+     let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
      
      Out_channel.output_string stdout (str ^ "\n");
   | None -> ()

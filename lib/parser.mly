@@ -1,5 +1,5 @@
 %{
-open Interpreter
+open Ast
 %}
 
 %token <int> INTLIT
@@ -43,11 +43,9 @@ open Interpreter
 %nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF DOT
 %nonassoc APP
 
-%start <Terms.t option> prog
+%start <t option> prog
 
-%type <Terms.t> term
-%type <Typ.t> typ
-%type <Typ.t> types
+%type <t> term
 
 %%
 
@@ -56,37 +54,37 @@ prog:
   | t = term EOF { Some t }
   ;
 
-typ:
+/*typ:
   | INT { Typ.Int }
   | BOOL { Typ.Bool }
 
 types:
   | t = typ { t }
-  | t1 = typ; ARROW; t2 = types { Typ.Arr (t1,t2) }
+  | t1 = typ; ARROW; t2 = types { Typ.Arr (t1,t2) }*/
 
 %inline binop:
-  | PLUS { Terms.Plus }
-  | MINUS { Terms.Minus }
-  | MULTIPLY { Terms.Multiply }
-  | LESSTHAN { Terms.LessThan }
-  | GREATERTHAN { Terms.GreaterThan }
-  | LTEQ { Terms.LTEQ }
-  | GTEQ { Terms.GTEQ }
+  | PLUS { Ast.Plus }
+  | MINUS { Ast.Minus }
+  | MULTIPLY { Ast.Multiply }
+  | LESSTHAN { Ast.LessThan }
+  | GREATERTHAN { Ast.GreaterThan }
+  | LTEQ { Ast.LTEQ }
+  | GTEQ { Ast.GTEQ }
 
 term:
-  | t1 = term; op = binop; t2 = term { Terms.BinOp (empty_info, t1, t2, op)}
-  | i = INTLIT { Terms.Int (empty_info, i) }
-  | t1 = term; EQUALITY; t2 = term { Terms.Eq (empty_info, t1, t2)}
-  | t1 = term; NOTEQUALITY; t2 = term { Terms.NEq (empty_info, t1, t2)}
-  | TRUE { Terms.Bool (empty_info, true) }
-  | FALSE { Terms.Bool (empty_info, false) }
-  | s = ID { Terms.Var (empty_info, s) }
-  | SLASH; arg = ID; COLON; arg_type = types; DOT; body = term { Terms.Abs (empty_info, arg, arg_type, body) }
-  | LET; s = ID; EQUAL; t1 = term; IN; t2 = term { Terms.Let (empty_info, s, t1, t2)}
-  | LET; REC; s = ID; COLON; typ = types; EQUAL; t1 = term; IN; t2 = term { Terms.LetRec (empty_info, s, typ, t1, t2)}
+  | t1 = term; op = binop; t2 = term { Ast.BinOp (empty_info, t1, t2, op)}
+  | i = INTLIT { Ast.Int (empty_info, i) }
+  | t1 = term; EQUALITY; t2 = term { Ast.Eq (empty_info, t1, t2)}
+  | t1 = term; NOTEQUALITY; t2 = term { Ast.NEq (empty_info, t1, t2)}
+  | TRUE { Ast.Bool (empty_info, true) }
+  | FALSE { Ast.Bool (empty_info, false) }
+  | s = ID { Ast.Var (empty_info, s) }
+  | SLASH; arg = ID; DOT; body = term { Ast.Abs (empty_info, arg, body) }
+  | LET; s = ID; EQUAL; t1 = term; IN; t2 = term { Ast.Let (empty_info, s, t1, t2)}
+  | LET; REC; s = ID; EQUAL; t1 = term; IN; t2 = term { Ast.LetRec (empty_info, s, t1, t2)}
   | BOPEN; t = term; BCLOSE { t }
-  | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Terms.If (empty_info, b, t1, t2)}
-  | t1 = term; t2 = term %prec APP { Terms.App (empty_info, t1, t2)}
+  | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Ast.If (empty_info, b, t1, t2)}
+  | t1 = term; t2 = term %prec APP { Ast.App (empty_info, t1, t2)}
   ;
 
 

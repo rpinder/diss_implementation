@@ -1,8 +1,6 @@
-open Base
+open Core
 
 exception TypeError of string
-
-type lit = LInt of int | LBool of bool
 
 module Var = struct
   module T = struct
@@ -12,13 +10,6 @@ module Var = struct
   include T
   include Comparator.Make(T)
 end
-
-type expr =
-  | Var of Var.t
-  | App of expr * expr
-  | Lam of Var.t * expr
-  | Lit of lit
-  | Let of Var.t * expr * expr
 
 module Typ = struct
   type t =
@@ -63,9 +54,9 @@ let scheme_ftv (Forall (vars, typ)) =
   let freeVars = Set.of_list (module Var) vars in
   Set.diff ftv_t freeVars
 
-let scheme_apply s (Forall (vars, typ)) : scheme =
+(*let scheme_apply s (Forall (vars, typ)) : scheme =
   let s' = List.fold vars ~init:s ~f:Map.remove in
-  Forall (vars, type_apply s' typ)
+  Forall (vars, type_apply s' typ)*)
 
 type subst = (Var.t, Typ.t, Var.comparator_witness) Map.t
 
@@ -81,9 +72,9 @@ let env_ftv (env : typeenv) : (Var.t, Var.comparator_witness) Set.t =
   let f l = List.fold (List.map ~f:(scheme_ftv) l) ~init:(Set.empty (module Var)) ~f:Set.union in
   f (Map.data env)
 
-let env_apply (s : subst) env =
+(*let env_apply (s : subst) env =
   Map.map env ~f:(scheme_apply s)
-
+ *)
 
 let generalise (env : typeenv) (t : Typ.t) : scheme =
   let diff = Set.diff (type_ftv t) (env_ftv env) in
@@ -100,7 +91,8 @@ let var_bind v t =
   | (Typ.Var v') when Var.equal v' v -> emptysubst
   | _ when Set.mem (type_ftv t) v -> raise (TypeError "Occurs check fails")
   | _ -> Map.singleton (module Var) v t
-let e0 = Let ((V "id"), Lam (V "x", Var (V "x")), Var (V "id"))
+
+(*let e0 = Ast.Let (Ast.empty_info, "id", Ast.Abs (Ast.empty_info, "x", Ast.Var (Ast.empty_info, "x")), Ast.Var (Ast.empty_info, "id"))*)
 
 let lookupEnv env (var : Var.t) =
   let (V s) = var in
@@ -110,15 +102,7 @@ let lookupEnv env (var : Var.t) =
      let t = instantiate sigma in
      t
 
-module Inference : sig
-  type t
-
-  val create : unit -> t
-  val add_constraint : t -> (Typ.t * Typ.t) -> unit
-  val infer : t -> typeenv -> expr -> Typ.t
-  val unifies : Typ.t -> Typ.t -> subst * (Typ.t * Typ.t) list
-  val typeof : expr -> Typ.t
-end = struct
+module Inference = struct
     type t = {
         mutable constraints : (Typ.t * Typ.t) list
       }
@@ -131,26 +115,34 @@ end = struct
 
     let rec infer t env ex =
       match ex with
-      | Lit (LInt _) -> Typ.Con "int"
-      | Lit (LBool _) -> Typ.Con "bool"
-      | Var x -> lookupEnv env x
-      | Lam (x, e) ->
+      | Ast.Int _ -> Typ.Con "int"
+      | Ast.Bool _ -> Typ.Con "bool"
+      | Ast.Var (_, x) -> lookupEnv env (V x)
+      | Ast.Abs (_, x, e) ->
          let tv = Fresh.gen () in
-         let env' = Map.add_exn env ~key:x ~data:(Forall ([], tv)) in
+         let env' = Map.add_exn env ~key:(V x) ~data:(Forall ([], tv)) in
          let t = infer t env' e in
          Typ.Arr (tv, t)
-      | App (e1, e2) ->
+      | Ast.App (_, e1, e2) ->
          let t1 = infer t env e1 in
          let t2 = infer t env e2 in
          let tv = Fresh.gen () in
          add_constraint t (t1, Typ.Arr (t2, tv));
          tv
-      | Let (x, e1, e2) ->
+      | Ast.Let (_, x, e1, e2) ->
          let t1 = infer t env e1 in
          let sc = generalise env t1 in
-         let env' = Map.add_exn env ~key:x ~data:sc in
+         let env' = Map.add_exn env ~key:(V x) ~data:sc in
          let t2 = infer t env' e2 in
          t2
+      | Ast.If (_, pred, e1, e2) ->
+         let tpred = infer t env pred in
+         add_constraint t (tpred, Typ.Con "bool");
+         let t1 = infer t env e1 in
+         let t2 = infer t env e2 in
+         add_constraint t (t1, t2);
+         t1
+      | _ -> failwith "Not yet implemented"
 
     type constra = Typ.t * Typ.t
     type unifier = subst * constra list
@@ -202,13 +194,16 @@ end = struct
       in
       Forall (List.map ord ~f:(fun x -> Var.V (snd x)), normtype body)
 
-    let typeof (ex : expr) : Typ.t =
+    let typeof (ex : Ast.t) : Typ.t =
       let env = Map.empty (module Var) in
       let t = create () in
       let typ = infer t env ex in
+      List.iter t.constraints ~f:(fun (t1, t2) ->
+          let str = (Typ.to_string t1) ^ " and " ^ (Typ.to_string t2) ^ " \n" in
+        Out_channel.output_string stdout str);
       let subst = solver (emptysubst, t.constraints) in
-      let Forall (_, body) = normalise (generalise env (type_apply subst typ))
-      in body
+      let Forall (_, _) = normalise (generalise env (type_apply subst typ))
+      in type_apply subst typ
 
 
   end

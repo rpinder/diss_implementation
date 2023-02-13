@@ -21,6 +21,7 @@ module Typ = struct
   let rec to_string = function
     | Var (V s) -> s
     | Con s -> s
+    | Arr (Arr _ as t1, t2) -> "(" ^ (to_string t1) ^ ") -> " ^ (to_string t2)
     | Arr (t1, t2) -> (to_string t1) ^ " -> " ^ (to_string t2)
 end
 
@@ -184,6 +185,13 @@ module Inference = struct
          let t2 = infer t env e2 in
          add_constraint t (t1, t2);
          t1
+      | Ast.Eq (_, e1, e2) | Ast.NEq (_, e1, e2) ->
+         let t1 = infer t env e1 in
+         let t2 = infer t env e2 in
+         add_constraint t (t1, t2);
+         let tv = Fresh.gen () in
+         add_constraint t (tv, Typ.Con "bool");
+         tv
       | _ -> failwith "Not yet implemented"
 
     (* change this to support any number *)

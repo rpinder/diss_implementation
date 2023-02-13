@@ -1,4 +1,4 @@
-let rec ackermann : int -> int -> int = \m : int. \n: int.
+let rec ackermann = \m. \n.
   if m == 0 then
     n + 1
   else if n == 0

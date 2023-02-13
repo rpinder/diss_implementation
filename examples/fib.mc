@@ -1,4 +1,4 @@
-let rec fib : int -> int = \x : int.
+let rec fib = \x.
   if x == 0 then
     0
   else if x == 1 then
@@ -6,4 +6,4 @@ let rec fib : int -> int = \x : int.
   else
     fib (x - 1) + fib (x - 2)
 in
-fib 35
+fib

@@ -182,6 +182,19 @@ module Inference = struct
          let env' = Map.add_exn env ~key:(V x) ~data:sc in
          let t2 = infer t env' e2 in
          t2
+      | Ast.LetRec (_, x, e1, e2) ->
+         let t' = create () in
+         let tv = Fresh.gen () in
+         let gen = generalise env tv in
+         let env' = Map.add_exn env ~key:(V x) ~data:gen in
+         let t0 = infer t' env' e1 in
+         add_constraint t' (tv, t0);
+         let sub = solver (emptysubst, t'.constraints) in
+         let t1 = type_apply sub t0 in
+         let sc = generalise env t1 in
+         let env'' = Map.set env' ~key:(V x) ~data:sc in
+         let t2 = infer t env'' e2 in
+         t2
       | Ast.If (_, pred, e1, e2) ->
          let tpred = infer t env pred in
          add_constraint t (tpred, Typ.Con "bool");

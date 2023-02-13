@@ -63,8 +63,11 @@ type subst = (Var.t, Typ.t, Var.comparator_witness) Map.t
 let emptysubst : subst = Map.empty (module Var)
 
 let compose_subst (s1 : subst) (s2 : subst) : subst =
-  let s1' = Map.map ~f:(fun x -> type_apply s1 x) s2 in
-  Map.merge_skewed s1' s2 ~combine:(fun ~key:_ v1 _ -> v1)
+  let s1' = Map.map ~f:(fun x -> type_apply s2 x) s1 in
+  Map.merge s1' s2 ~f:(fun ~key:_ opt ->
+      match opt with
+      | `Left v | `Right v -> Some v
+      | `Both (v, _) -> Some v)
 
 type typeenv = (Var.t, scheme, Var.comparator_witness) Map.t
 
@@ -107,45 +110,15 @@ module Inference = struct
         mutable constraints : (Typ.t * Typ.t) list
       }
 
+    type constra = Typ.t * Typ.t
+    type unifier = subst * constra list
+
     let create () = { constraints = [] }
 
     let add_constraint t con = 
       let constraints' = con :: t.constraints in
       t.constraints <- constraints'
 
-    let rec infer t env ex =
-      match ex with
-      | Ast.Int _ -> Typ.Con "int"
-      | Ast.Bool _ -> Typ.Con "bool"
-      | Ast.Var (_, x) -> lookupEnv env (V x)
-      | Ast.Abs (_, x, e) ->
-         let tv = Fresh.gen () in
-         let env' = Map.add_exn env ~key:(V x) ~data:(Forall ([], tv)) in
-         let t = infer t env' e in
-         Typ.Arr (tv, t)
-      | Ast.App (_, e1, e2) ->
-         let t1 = infer t env e1 in
-         let t2 = infer t env e2 in
-         let tv = Fresh.gen () in
-         add_constraint t (t1, Typ.Arr (t2, tv));
-         tv
-      | Ast.Let (_, x, e1, e2) ->
-         let t1 = infer t env e1 in
-         let sc = generalise env t1 in
-         let env' = Map.add_exn env ~key:(V x) ~data:sc in
-         let t2 = infer t env' e2 in
-         t2
-      | Ast.If (_, pred, e1, e2) ->
-         let tpred = infer t env pred in
-         add_constraint t (tpred, Typ.Con "bool");
-         let t1 = infer t env e1 in
-         let t2 = infer t env e2 in
-         add_constraint t (t1, t2);
-         t1
-      | _ -> failwith "Not yet implemented"
-
-    type constra = Typ.t * Typ.t
-    type unifier = subst * constra list
 
     let list_type_apply (s : subst) (xs : Typ.t list) =
       List.map xs ~f:(type_apply s)
@@ -179,6 +152,40 @@ module Inference = struct
          let (su1, cs1) = unifies t1 t2 in
          solver (compose_subst su1 su, cs1 @ (list_constraint_apply su1 cs0))
 
+    let rec infer t env ex =
+      match ex with
+      | Ast.Int _ -> Typ.Con "int"
+      | Ast.Bool _ -> Typ.Con "bool"
+      | Ast.Var (_, x) -> lookupEnv env (V x)
+      | Ast.Abs (_, x, e) ->
+         let tv = Fresh.gen () in
+         let env' = Map.add_exn env ~key:(V x) ~data:(Forall ([], tv)) in
+         let t = infer t env' e in
+         Typ.Arr (tv, t)
+      | Ast.App (_, e1, e2) ->
+         let t1 = infer t env e1 in
+         let t2 = infer t env e2 in
+         let tv = Fresh.gen () in
+         add_constraint t (t1, Typ.Arr (t2, tv));
+         tv
+      | Ast.Let (_, x, e1, e2) ->
+         let t' = create () in
+         let t0 = infer t' env e1 in
+         let sub = solver (emptysubst, t'.constraints) in
+         let t1 = type_apply sub t0 in
+         let sc = generalise env t1 in
+         let env' = Map.add_exn env ~key:(V x) ~data:sc in
+         let t2 = infer t env' e2 in
+         t2
+      | Ast.If (_, pred, e1, e2) ->
+         let tpred = infer t env pred in
+         add_constraint t (tpred, Typ.Con "bool");
+         let t1 = infer t env e1 in
+         let t2 = infer t env e2 in
+         add_constraint t (t1, t2);
+         t1
+      | _ -> failwith "Not yet implemented"
+
     (* change this to support any number *)
     let letters = ["a";"b";"c";"d";"e";"f";"g";"h";"i";"j";"k";"l";"m";"n";"o";"p";"q";"r";"s";"t";"u";"v";"w";"x";"y";"z"]
 
@@ -198,12 +205,7 @@ module Inference = struct
       let env = Map.empty (module Var) in
       let t = create () in
       let typ = infer t env ex in
-      List.iter t.constraints ~f:(fun (t1, t2) ->
-          let str = (Typ.to_string t1) ^ " and " ^ (Typ.to_string t2) ^ " \n" in
-        Out_channel.output_string stdout str);
       let subst = solver (emptysubst, t.constraints) in
-      let Forall (_, _) = normalise (generalise env (type_apply subst typ))
-      in type_apply subst typ
-
-
+      let Forall (_, body) = normalise (generalise env (type_apply subst typ))
+      in body
   end

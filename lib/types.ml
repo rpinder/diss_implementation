@@ -106,6 +106,10 @@ let lookupEnv env (var : Var.t) =
      let t = instantiate sigma in
      t
 
+let binops op = match op with
+  | Ast.Plus | Ast.Minus | Ast.Multiply -> Typ.Arr (Typ.Con "int", Typ.Arr (Typ.Con "int", Typ.Con "int"))
+  | Ast.LessThan | Ast.GreaterThan | Ast.LTEQ | Ast.GTEQ -> Typ.Arr (Typ.Con "int", Typ.Arr (Typ.Con "int", Typ.Con "bool"))
+
 module Inference = struct
     type t = {
         mutable constraints : (Typ.t * Typ.t) list
@@ -192,6 +196,15 @@ module Inference = struct
          let tv = Fresh.gen () in
          add_constraint t (tv, Typ.Con "bool");
          tv
+      | Ast.BinOp (_, e1, e2, op) ->
+         let t1 = infer t env e1 in
+         let t2 = infer t env e2 in
+         let tv = Fresh.gen () in
+         let u1 = Typ.Arr (t1, Typ.Arr (t2, tv)) in
+         let u2 = binops op in
+         add_constraint t (u1, u2);
+         tv
+         
       | _ -> failwith "Not yet implemented"
 
     (* change this to support any number *)

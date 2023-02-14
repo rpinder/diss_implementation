@@ -6,4 +6,4 @@ let rec fib = \x.
   else
     fib (x - 1) + fib (x - 2)
 in
-fib
+fib 15

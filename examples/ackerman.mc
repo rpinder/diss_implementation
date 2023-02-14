@@ -5,4 +5,4 @@ let rec ackermann = \m. \n.
     then ackermann (m - 1) 1
   else
     ackermann (m - 1) (ackermann m (n - 1))
-in ackermann 3 3
+in ackermann 3 3 == false

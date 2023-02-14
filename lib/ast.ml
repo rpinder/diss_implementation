@@ -13,6 +13,8 @@ type t =
   | BinOp of info * t * t * op
   | Eq of info * t * t
   | NEq of info * t * t
+  | LetBox of info * string * t * t
+  | Box of info * t
 and op =
   | Plus
   | Minus
@@ -50,5 +52,7 @@ let rec to_string = function
   | BinOp (_, t1, t2, _) -> Printf.sprintf "(%s <op> %s)" (to_string t1) (to_string t2)
   | Eq (_, t1, t2) -> Printf.sprintf "(%s == %s)" (to_string t1) (to_string t2)
   | NEq (_, t1, t2) -> Printf.sprintf "(%s != %s)" (to_string t1) (to_string t2)
+  | LetBox (_, s, t1, t2) -> Printf.sprintf "(let box %s = %s in %s)" s (to_string t1) (to_string t2)
+  | Box (_, t1) -> Printf.sprintf "box (%s)" (to_string t1)
 
 let empty_info = { line_number = 0; column_number = 0 }

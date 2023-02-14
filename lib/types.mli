@@ -1,5 +1,7 @@
 open Base
 
+exception TypeError of string
+
 module Var : sig
   type t
 end
@@ -9,6 +11,7 @@ module Typ : sig
     | Var of Var.t
     | Con of string
     | Arr of t * t
+    | Box of t
   [@@deriving equal]
 
   val to_string : t -> string

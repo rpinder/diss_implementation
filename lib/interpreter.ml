@@ -69,6 +69,14 @@ let rec eval env t =
        Ast.Bool (fi, false)
      else
        Ast.Bool (fi, true)
+  | Ast.LetBox (fi, s, t1, t2) ->
+     (match eval env t1 with
+     | Ast.Box (_, x) -> eval env (Ast.Let (fi, s, x, t2))
+     | _ -> failwith "ERROR")
+  | Ast.Box (fi, t1) ->
+     let t1' = eval env t1 in
+     Ast.Box (fi, t1')
+     
 
 (* Test things - TODO add real tests*)
 

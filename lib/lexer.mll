@@ -21,6 +21,7 @@ rule read =
   | "false" { FALSE }
   | "int" { INT }
   | "bool" { BOOL }
+  | "box" { BOX }
   | "let" { LET }
   | "rec" { REC }
   | "in" { IN }
@@ -37,6 +38,7 @@ rule read =
   | id { ID (lexeme lexbuf) }
   | ":" { COLON }
   | "->" { ARROW }
+  | "<-" { BACKARROW }
   | "\\" { SLASH }
   | "." { DOT }
   | "(" { BOPEN }

@@ -11,6 +11,8 @@ type t =
   | BinOp of info * t * t * op
   | Eq of info * t * t
   | NEq of info * t * t
+  | LetBox of info * string * t * t
+  | Box of info * t
 and op =
   | Plus
   | Minus

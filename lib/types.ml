@@ -16,6 +16,7 @@ module Typ = struct
     | Var of Var.t
     | Con of string
     | Arr of t * t
+    | Box of t
   [@@deriving equal]
 
   let rec to_string = function
@@ -23,6 +24,7 @@ module Typ = struct
     | Con s -> s
     | Arr (Arr _ as t1, t2) -> "(" ^ (to_string t1) ^ ") -> " ^ (to_string t2)
     | Arr (t1, t2) -> (to_string t1) ^ " -> " ^ (to_string t2)
+    | Box t1 -> "box (" ^ to_string t1 ^ ")"
 end
 
 type scheme = Forall of Var.t list * Typ.t
@@ -41,6 +43,7 @@ let rec type_ftv = function
   | Typ.Var v -> Set.singleton (module Var) v
   | Typ.Con _ -> Set.empty (module Var)
   | Typ.Arr (t1, t2) -> Set.union (type_ftv t1) (type_ftv t2)
+  | Typ.Box t1 -> type_ftv t1
 
 let rec type_apply s = function
   | Typ.Var n as v ->
@@ -139,7 +142,8 @@ module Inference = struct
       | (Typ.Var v, t) -> var_bind v t, []
       | (t, Typ.Var v) -> var_bind v t, []
       | (Typ.Arr (t1, t2), Typ.Arr (t3, t4)) -> unify_list [t1; t2] [t3; t4]
-      | _ -> raise (TypeError "Unification failed")
+      | (Typ.Box t1, Typ.Box t2) -> unifies t1 t2
+      | _ -> raise (TypeError (Printf.sprintf "Unification failed - Cannot unify\n  %s\nwith\n  %s\n" (Typ.to_string t1) (Typ.to_string t2)))
     and unify_list l1 l2 : unifier =
       match (l1, l2) with
       | [], [] -> emptysubst, []
@@ -217,17 +221,32 @@ module Inference = struct
          let u2 = binops op in
          add_constraint t (u1, u2);
          tv
-         
+      | Ast.LetBox (_, x, e1, e2) ->
+         let t1 = infer t env e1 in
+         let tv = Fresh.gen () in
+         add_constraint t (t1, Typ.Box tv);
+         let sc = generalise env tv in
+         let env' = Map.add_exn env ~key:(V x) ~data:sc in
+         let t2 = infer t env' e2 in
+         Out_channel.output_string stdout (Printf.sprintf "%s | %s | %s\n" (Typ.to_string t1) (Typ.to_string tv ) (Typ.to_string t2));
+         t2
+      | Ast.Box (_, e1) ->
+         let t1 = infer t env e1 in
+         Out_channel.output_string stdout (" || " ^ Typ.to_string t1 ^ "\n");
+         let tv = Fresh.gen () in
+         add_constraint t (tv, Typ.Box t1);
+         tv
       | _ -> failwith "Not yet implemented"
 
     (* change this to support any number *)
     let letters = ["a";"b";"c";"d";"e";"f";"g";"h";"i";"j";"k";"l";"m";"n";"o";"p";"q";"r";"s";"t";"u";"v";"w";"x";"y";"z"]
 
-    let normalise ((Forall (_, body)) : scheme) : scheme =
+    let _normalise ((Forall (_, body)) : scheme) : scheme =
       let ord = List.mapi (Set.to_list (type_ftv body)) ~f:(fun i x -> (x, List.nth_exn letters i)) in
       let rec normtype = function
         | Typ.Arr (t1, t2) -> Typ.Arr (normtype t1, normtype t2)
         | Typ.Con _ as x -> x
+        | Typ.Box x -> Typ.Box (normtype x)
         | Typ.Var a ->
            (match Caml.List.assoc_opt a ord with
             | Some x -> Typ.Var (V x)
@@ -239,7 +258,8 @@ module Inference = struct
       let env = Map.empty (module Var) in
       let t = create () in
       let typ = infer t env ex in
+      List.iter t.constraints ~f:(fun (t1, t2) -> Out_channel.output_string stdout (Typ.to_string t1 ^ " and " ^ Typ.to_string t2 ^ "\n"));
       let subst = solver (emptysubst, t.constraints) in
-      let Forall (_, body) = normalise (generalise env (type_apply subst typ))
+      let Forall (_, body) = (generalise env (type_apply subst typ))
       in body
   end

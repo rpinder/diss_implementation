@@ -10,11 +10,14 @@ let rec loop () =
   in
   (match Parsing.attempt s with
   | Some t ->
+     (try
      let typeof = Types.Inference.typeof t in
      let t' = Interpreter.eval (Environment.create ()) t in
      let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
      
      Out_channel.output_string stdout (str ^ "\n");
+     with
+     | Types.TypeError x -> Out_channel.output_string stdout x)
   | None -> ());
   loop ()
 

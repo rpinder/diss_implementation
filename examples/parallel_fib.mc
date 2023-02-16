@@ -1,12 +1,8 @@
-let rec fib = \x.
-  if x == 0 then
-    0
-  else if x == 1 then
-    1
-  else if x < 20 then
-    fib (x - 1) + fib (x - 2)
-  else
-    let box y <- box (fib (x - 1)) in
-    let box z <- box (fib (x - 2)) in
-    y + z
-in fib 37
+let bring = \x. let box u <- x in u
+in
+let rapp = \f. \x.
+  let g = bring f in
+  let y = bring x in
+  box (g y)
+in
+rapp (*(box (\x. x + 1)) (box 4)*)

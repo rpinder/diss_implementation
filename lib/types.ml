@@ -225,14 +225,11 @@ module Inference = struct
          let t1 = infer t env e1 in
          let tv = Fresh.gen () in
          add_constraint t (t1, Typ.Box tv);
-         let sc = generalise env tv in
-         let env' = Map.add_exn env ~key:(V x) ~data:sc in
+         let env' = Map.add_exn env ~key:(V x) ~data:(Forall ([], tv)) in
          let t2 = infer t env' e2 in
-         Out_channel.output_string stdout (Printf.sprintf "%s | %s | %s\n" (Typ.to_string t1) (Typ.to_string tv ) (Typ.to_string t2));
          t2
       | Ast.Box (_, e1) ->
          let t1 = infer t env e1 in
-         Out_channel.output_string stdout (" || " ^ Typ.to_string t1 ^ "\n");
          let tv = Fresh.gen () in
          add_constraint t (tv, Typ.Box t1);
          tv
@@ -258,7 +255,6 @@ module Inference = struct
       let env = Map.empty (module Var) in
       let t = create () in
       let typ = infer t env ex in
-      List.iter t.constraints ~f:(fun (t1, t2) -> Out_channel.output_string stdout (Typ.to_string t1 ^ " and " ^ Typ.to_string t2 ^ "\n"));
       let subst = solver (emptysubst, t.constraints) in
       let Forall (_, body) = (generalise env (type_apply subst typ))
       in body

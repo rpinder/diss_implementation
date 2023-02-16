@@ -18,7 +18,7 @@ let eval_operator op fi =
 let rec eval pool env t =
   match t with
   | Ast.Var (_, name) -> (match Environment.get env name with
-                          | Some (Ast.WaitingOn p) -> eval pool env (Ast.WaitingOn p)
+                          | Some (Ast.WaitingOn _ as p) -> eval pool env p
                           | Some x -> x
                           | _ -> failwith ("IMPLEMENT A RESOLVER " ^ "CAN'T FIND " ^ name))
   | Ast.Int (_,_) as x -> x

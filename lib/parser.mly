@@ -1,5 +1,11 @@
 %{
 open Ast
+
+let rec unroll args body =
+  match args with
+  | [] -> body
+  | x :: xs -> Abs (empty_info, x, unroll xs body)
+
 %}
 
 %token <int> INTLIT
@@ -33,6 +39,7 @@ open Ast
 %token REC
 %token BOX
 %token BACKARROW
+%token FN
 
 %token APP
 
@@ -46,16 +53,20 @@ open Ast
 %nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF DOT
 %nonassoc APP
 
-%start <t option> prog
+%start <(string * t) list> prog
 
 %type <t> term
 
 %%
 
 prog:
-  | EOF { None }
-  | t = term EOF { Some t }
+  | EOF { [] }
+  | defns = list(declaration) EOF { defns }
   ;
+
+declaration:
+  | FN; s = ID; args = list(ID); EQUAL; body = term { (s, unroll args body) }
+
 
 /*typ:
   | INT { Typ.Int }

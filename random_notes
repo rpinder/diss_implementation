@@ -1,0 +1,68 @@
+;; This buffer is for text that is not saved, and for Lisp evaluation.
+;; To create a file, visit it with <open> and enter text in its buffer.
+
+Global Environment (available from anywhere)
+
+Local Environment
+
+box can only take closed terms or things from the global environment
+
+Capital variables are global box, lowercase are standard? (INSANE)
+
+How to do this in statically?
+
+1) AST phase where you check only closed terms are used or box terms
+  - how to check multiply levels? 
+  - in typechecking make it so that box requires box type and if e1 is not a box then check if it has free variables
+    ( how does this fit into my stuff?)
+  - Letbox works as normal
+  - solve inside the Ast.Box case and then if it fails check if e1 has any free variables. If not then allow it to be typed as a box
+
+2) Two environments, one for box terms and one for normal terms
+  - How do you differentiate variables? This difference shouldn't be present to programmer
+    - Could check local first and then global after
+    - can typechecking work?
+
+3) Runtime checking that all variables used in expression are box types or closed????
+  - Checking if something is box type can be checking the expression used in of type box
+
+
+box typing rules
+
+box : a -> box a
+Typ.Arr (a, box a) ~ (a, tv)
+
+let t' = create () in
+let t0 = infer t' env e1 in
+let sub = solver(emptysubst, t'.constraints) in
+let t1 = type_apply sub t0 in
+Typ.Box t1
+
+gives \x. box (x + 1) : t3 -> box (int)
+
+let t1 = infer t env e1 in
+Typ.Box t1
+
+gives \x. box (x + 1) : int -> box (t3)
+
+box brings you things from the global address space into the local address space, closed terms can also be used for box
+
+with let box a variable in the environment can now be used in a box context
+could do when I find a let box u <- x in ~ I say that u is a closed term
+
+box needs to have a closure <- would be a waste to contain whole environment so should only contain box environment (but does this matter)
+
+---------------------
+
+Two environments in eval, one in typing??
+with let box the u needs to be in an environment and so with a global environment the u could be a key in a hashtable (this would now require garbage collection (isn't needed at first, just fill up the memory)
+
+box won't need closure as terms are closed ->
+
+---------------------
+
+being in global space doesn't mean type has to be box A
+
+---------------------
+
+CHANGE REF TO ATOMIC

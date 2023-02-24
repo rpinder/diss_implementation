@@ -230,9 +230,7 @@ module Inference = struct
          t2
       | Ast.Box (_, e1) ->
          let t1 = infer t env e1 in
-         let tv = Fresh.gen () in
-         add_constraint t (tv, Typ.Box t1);
-         tv
+         Typ.Box t1
       | _ -> failwith "Not yet implemented"
 
     (* change this to support any number *)

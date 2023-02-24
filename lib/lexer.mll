@@ -17,6 +17,7 @@ rule read =
   | white { read lexbuf }
   | newline { read lexbuf }
   | intlit { INTLIT (int_of_string (lexeme lexbuf)) }
+  | "fn" { FN }
   | "true" { TRUE }
   | "false" { FALSE }
   | "int" { INT }

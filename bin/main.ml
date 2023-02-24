@@ -1,7 +1,7 @@
 open Core
 open Diss_implementation
 
-let rec loop num_threads () =
+(*let rec loop num_threads () =
   Out_channel.output_string stdout "> ";
   Out_channel.flush stdout;
   let s = match In_channel.input_line In_channel.stdin with
@@ -19,22 +19,47 @@ let rec loop num_threads () =
        with
        | Types.TypeError x -> Out_channel.output_string stdout (x ^ "\n"))
    | None -> ());
-  loop num_threads ()
+  loop num_threads ()*)
 
 let run file num_threads =
   let inx = In_channel.create file in
   let lexbuf = Lexing.from_channel inx in
-  match Parser.prog Lexer.read lexbuf with
+  (*match Parser.prog Lexer.read lexbuf with
   | Some t -> 
      (try
-        let typeof = Types.Inference.typeof  t in
+        (*let typeof = Types.Inference.typeof  t in*)
+        let typeof = Types.Typ.Con "nope" in
         let t' = Interpreter.interpret num_threads (Environment.create ()) t in
         let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
         
         Out_channel.output_string stdout (str ^ "\n");
       with
       | Types.TypeError x -> Out_channel.output_string stdout (x ^ "\n"))
-  | None -> ()
+  | None -> ()*)
+  let decls = 
+    try
+      Parser.prog Lexer.read lexbuf
+    with
+    | Parser.Error ->
+       let str = sprintf "Syntax Error on line %d at char %d\n" lexbuf.lex_curr_p.pos_lnum lexbuf.lex_curr_p.pos_bol in
+       Out_channel.output_string stdout str;
+       exit 1
+  in
+  let env = Environment.create () in
+  List.iter decls ~f:(fun (s, t) -> Environment.define env s t);
+  let main = match Environment.get env "main" with
+    | Some x -> x
+    | None ->  failwith "No main function"
+  in
+  try
+    let typeof = Types.Typ.Con "nope" in
+    let t' = Interpreter.interpret num_threads env main in
+    let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
+    
+    Out_channel.output_string stdout (str ^ "\n");
+  with
+  | Types.TypeError x -> Out_channel.output_string stdout (x ^ "\n")
+
 
 let command =
   Command.basic
@@ -44,6 +69,6 @@ let command =
      fun () -> let num_threads = Option.value number_threads ~default:1 in
                match filename with
                | Some x -> run x num_threads
-               | None -> loop num_threads ())
+               | None -> failwith "Not currently supported") (*loop num_threads ()) *)
 
 let () = Command_unix.run command

@@ -6,4 +6,4 @@
 (library
  (name diss_implementation)
  (preprocess (pps ppx_jane))
- (libraries core domainslib))
+ (libraries core core_unix.error_checking_mutex domainslib))

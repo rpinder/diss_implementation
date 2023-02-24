@@ -8,12 +8,14 @@ type t =
   { globals : Ast.t Environment.t
   ; counter : int Atomic.t
   ; table : (int, Ast.t T.promise) Hashtbl.t
+  ; table_mutex : Error_checking_mutex.t
   }
 
 let create globals =
   { globals
   ; counter = Atomic.make 0
   ; table = Hashtbl.create (module Int)
+  ; table_mutex = Error_checking_mutex.create ()
   }
 
 let eval_operator op fi =
@@ -53,26 +55,30 @@ let rec eval t pool env term =
   match term with
   | Ast.Var (_, name) -> (match Environment.get env name with
                           | Some (Ast.MVar _ as mv) ->
-                             Out_channel.output_string stdout ("FIRST: " ^ name ^ "\n");
-                             Out_channel.flush stdout;
+                             (* Out_channel.output_string stdout ("FIRST: " ^ name ^ "\n"); *)
+                             (* Out_channel.flush stdout; *)
                              eval t pool env mv
                           | Some x ->
-                             Out_channel.output_string stdout "SECOND\n";
-                             Out_channel.flush stdout;
+                             (* Out_channel.output_string stdout "SECOND\n"; *)
+                             (* Out_channel.flush stdout; *)
                              eval t pool env x
                           | _ -> (match Environment.get t.globals name with
                                   | Some x ->
-                                     Out_channel.output_string stdout "THIRD\n";
-                                     Out_channel.flush stdout;
+                                     (* Out_channel.output_string stdout "THIRD\n"; *)
+                                     (* Out_channel.flush stdout; *)
                                      eval t pool env x
                                   | _ -> raise (RuntimeError ("IMPLEMENT A RESOLVER " ^ "CAN'T FIND " ^ name))))
-  | Ast.MVar (_, name) -> (match Hashtbl.find t.table name with
+  | Ast.MVar (_, name) ->
+     Error_checking_mutex.lock t.table_mutex;
+     let res = Hashtbl.find t.table name in
+     Error_checking_mutex.unlock t.table_mutex;
+     (match res with
                            | Some x ->
-                              Out_channel.output_string stdout ("STARTING " ^ Int.to_string name ^ "\n");
-                              Out_channel.flush stdout;
+                              (* Out_channel.output_string stdout ("STARTING " ^ Int.to_string name ^ "\n"); *)
+                              (* Out_channel.flush stdout; *)
                               let res = T.await pool x in
-                              Out_channel.output_string stdout "END\n";
-                              Out_channel.flush stdout;
+                              (* Out_channel.output_string stdout "END\n"; *)
+                              (* Out_channel.flush stdout; *)
                               res
                            | None -> raise (RuntimeError ("Unknown MVAR")))
   | Ast.Int (_,_) as x -> x
@@ -129,26 +135,28 @@ let rec eval t pool env term =
      else
        Ast.Bool (fi, true)
   | Ast.LetBox (_, s, t1, t2) ->
-     Out_channel.output_string stdout "letbox\n";
-     Out_channel.flush stdout;
+     (* Out_channel.output_string stdout "letbox\n"; *)
+     (* Out_channel.flush stdout; *)
      (match eval t pool env t1 with
       | Ast.Box (fi, x) ->
-         Out_channel.output_string stdout "it was a box\n";
-         Out_channel.flush stdout;
+         (* Out_channel.output_string stdout "it was a box\n"; *)
+         (* Out_channel.flush stdout; *)
          let env' = Environment.createWithEnclosing env in
-         Out_channel.output_string stdout "creating promise\n";
-         Out_channel.flush stdout;
-         let promise = T.async pool (fun _ -> let res = eval t pool (Environment.create ()) x in Out_channel.output_string stdout "FINISHED\n"; res) in
-         Hashtbl.set t.table ~key:(Atomic.get t.counter) ~data:promise;
-         Environment.define env' s (Ast.MVar (fi, Atomic.get t.counter));
-         Atomic.incr t.counter;
-         Out_channel.output_string stdout ("evaluating t2 : " ^ (Ast.to_string t2) ^ "\n");
-         Out_channel.flush stdout;
+         (* Out_channel.output_string stdout "creating promise\n"; *)
+         (* Out_channel.flush stdout; *)
+         let promise = T.async pool (fun _ -> let res = eval t pool (Environment.create ()) x in (*Out_channel.output_string stdout "FINISHED\n";*) res) in
+         let count = Atomic.fetch_and_add t.counter 1 in
+         Error_checking_mutex.lock t.table_mutex;
+         Hashtbl.set t.table ~key:count ~data:promise;
+         Error_checking_mutex.unlock t.table_mutex;
+         Environment.define env' s (Ast.MVar (fi, count));
+         (* Out_channel.output_string stdout ("evaluating t2 : " ^ (Ast.to_string t2) ^ "\n"); *)
+         (* Out_channel.flush stdout; *)
          eval t pool env' t2
       | x -> let s = Printf.sprintf "%s is not a box" (Ast.to_string x) in raise (RuntimeError s))
   | Ast.Box (fi, t1) ->
      let t1' = convert_mvar t env (Set.empty (module String)) t1 in
-     Out_channel.output_string stdout "AAAHH\n";
+     (* Out_channel.output_string stdout "AAAHH\n"; *)
      Ast.Box (fi, t1') 
 
 let interpret n env term =

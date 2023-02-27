@@ -4,7 +4,7 @@ open Ast
 let rec unroll args body =
   match args with
   | [] -> body
-  | x :: xs -> Abs (empty_info, x, unroll xs body)
+  | x :: xs -> Ast.Abs (empty_info, x, unroll xs body)
 
 %}
 
@@ -53,9 +53,10 @@ let rec unroll args body =
 %nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF DOT
 %nonassoc APP
 
-%start <(string * t) list> prog
+%start <(string * Ast.t) list> prog
+%start <Ast.t option> single
 
-%type <t> term
+%type <Ast.t> term
 
 %%
 
@@ -63,6 +64,10 @@ prog:
   | EOF { [] }
   | defns = list(declaration) EOF { defns }
   ;
+
+single:
+  | EOF { None }
+  | t = term; EOF { Some t }
 
 declaration:
   | FN; s = ID; args = list(ID); EQUAL; body = term { (s, unroll args body) }

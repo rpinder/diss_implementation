@@ -156,7 +156,6 @@ let rec eval t pool env term =
       | x -> let s = Printf.sprintf "%s is not a box" (Ast.to_string x) in raise (RuntimeError s))
   | Ast.Box (fi, t1) ->
      let t1' = convert_mvar t env (Set.empty (module String)) t1 in
-     (* Out_channel.output_string stdout "AAAHH\n"; *)
      Ast.Box (fi, t1') 
 
 let interpret n env term =

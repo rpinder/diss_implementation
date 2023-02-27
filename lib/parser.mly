@@ -43,6 +43,7 @@ let rec unroll args body =
 
 %token APP
 
+%nonassoc DOT
 %right IN
 %nonassoc ELSE
 %left EQUALITY NOTEQUALITY
@@ -50,7 +51,7 @@ let rec unroll args body =
 %nonassoc BOX
 %left PLUS MINUS
 %left MULTIPLY
-%nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF DOT
+%nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF
 %nonassoc APP
 
 %start <(string * Ast.t) list> prog

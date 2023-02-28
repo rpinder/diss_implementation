@@ -1,5 +1,6 @@
 %{
 open Ast
+open Types
 
 let rec unroll args body =
   match args with
@@ -43,6 +44,7 @@ let rec unroll args body =
 
 %token APP
 
+%right ARROW
 %nonassoc DOT
 %right IN
 %nonassoc ELSE
@@ -54,7 +56,7 @@ let rec unroll args body =
 %nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF
 %nonassoc APP
 
-%start <(string * Ast.t) list> prog
+%start <(string * Ast.t * Typ.t) list> prog
 %start <Ast.t option> single
 
 %type <Ast.t> term
@@ -71,16 +73,19 @@ single:
   | t = term; EOF { Some t }
 
 declaration:
-  | FN; s = ID; args = list(ID); EQUAL; body = term { (s, unroll args body) }
+  | FN; s = ID; args = list(ID); COLON; t = types; EQUAL; body = term { (s, unroll args body, t) }
 
 
-/*typ:
-  | INT { Typ.Int }
-  | BOOL { Typ.Bool }
+typ:
+  | INT { Typ.Con "int" }
+  | BOOL { Typ.Con "bool" }
+  | s = ID { Typ.Var (V s) }
 
 types:
   | t = typ { t }
-  | t1 = typ; ARROW; t2 = types { Typ.Arr (t1,t2) }*/
+  | t1 = types; ARROW; t2 = types { Typ.Arr (t1,t2) }
+  | BOX; t = types { Typ.Box t } 
+  | BOPEN; t = types; BCLOSE { t }
 
 %inline binop:
   | PLUS { Ast.Plus }

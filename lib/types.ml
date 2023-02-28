@@ -68,8 +68,9 @@ type subst = (Var.t, Typ.t, Var.comparator_witness) Map.t
 let emptysubst : subst = Map.empty (module Var)
 
 let compose_subst (s1 : subst) (s2 : subst) : subst =
-  let s1' = Map.map ~f:(fun x -> type_apply s2 x) s1 in
-  Map.merge s1' s2 ~f:(fun ~key:_ opt ->
+  (* let s1' = Map.map ~f:(fun x -> type_apply s2 x) s1 in *)
+  let s2' = Map.map ~f:(fun x -> type_apply s1 x) s2 in
+  Map.merge s1 s2' ~f:(fun ~key:_ opt ->
       match opt with
       | `Left v | `Right v -> Some v
       | `Both (v, _) -> Some v)
@@ -237,7 +238,7 @@ module Inference = struct
     (* change this to support any number *)
     let letters = ["a";"b";"c";"d";"e";"f";"g";"h";"i";"j";"k";"l";"m";"n";"o";"p";"q";"r";"s";"t";"u";"v";"w";"x";"y";"z"]
 
-    let _normalise ((Forall (_, body)) : scheme) : scheme =
+    let normalise ((Forall (_, body)) : scheme) : scheme =
       let ord = List.mapi (Set.to_list (type_ftv body)) ~f:(fun i x -> (x, List.nth_exn letters i)) in
       let rec normtype = function
         | Typ.Arr (t1, t2) -> Typ.Arr (normtype t1, normtype t2)
@@ -250,11 +251,49 @@ module Inference = struct
       in
       Forall (List.map ord ~f:(fun x -> Var.V (snd x)), normtype body)
 
-    let typeof (ex : Ast.t) : Typ.t =
+    let typeof ex  =
       let empty_env = Map.empty (module Var) in
       let t = create () in
       let typ = infer t empty_env empty_env ex in
       let subst = solver (emptysubst, t.constraints) in
-      let Forall (_, body) = (generalise empty_env (type_apply subst typ))
-      in body
+      let Forall (_, body) = normalise (generalise empty_env (type_apply subst typ)) in
+      body
+
+    let rec zip_different_lengths xs ys =
+      match (xs, ys) with
+      | [], _ -> []
+      | _, [] -> []
+      | x::xs, y::ys -> (x, y) :: zip_different_lengths xs ys
+
+    let check_same (Forall (vars1, typ1)) (Forall (vars2, typ2)) =
+      let error_msg () = raise (TypeError ("Types are not equal:\n  " ^ (Typ.to_string typ1) ^ "\n  " ^ (Typ.to_string typ2))) in
+      let vs =  zip_different_lengths vars1 vars2 in
+      let typ1_to_typ2 = Map.of_alist_exn (module Var) vs
+                         |> Map.map ~f:(fun x -> Typ.Var x) in
+      let typ1' = type_apply typ1_to_typ2 typ1 in
+      if Typ.equal typ1' typ2 then () else error_msg ()
+
+    (* for each declaration, check that the type unifies with given type *)
+    let typecheck_program decls =
+      (* convert given types to schemes so they can be put into type environment *)
+      let globalenv = List.map decls ~f:(fun (name, _, typ) -> (Var.V name, generalise (Map.empty (module Var)) typ))
+                      |> Map.of_alist_exn (module Var)
+      in
+      let empty_env = Map.empty (module Var) in
+      List.iter decls ~f:(fun (name, term, _) ->
+          try 
+          let t = create () in
+          let typ = infer t globalenv empty_env term in
+          (* add_constraint t (typ, instantiate (Map.find_exn globalenv (Var.V name))); *)
+          let subst = solver (emptysubst, t.constraints) in
+          (* let t2 = create () in *)
+          (* add_constraint t2 (type_apply subst typ, instantiate (Map.find_exn globalenv (Var.V name))); *)
+          (* List.iter t2.constraints ~f:(fun (a, b) -> Out_channel.output_string stdout ((Typ.to_string a) ^ " and " ^ (Typ.to_string b) ^ "\n")); *)
+          (* let _subst2 = solver (emptysubst, t2.constraints) in () *)
+          check_same (Map.find_exn globalenv (Var.V name)) (generalise empty_env (type_apply subst typ))
+          with
+          | TypeError x -> raise (TypeError ("TypeError in " ^ name ^ "\n" ^ x)));
+      let Forall (_, body) = Map.find_exn globalenv (V "main") in
+      body
+      
   end

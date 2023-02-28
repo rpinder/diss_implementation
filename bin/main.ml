@@ -34,13 +34,13 @@ let run file num_threads =
        exit 1
   in
   let env = Environment.create () in
-  List.iter decls ~f:(fun (s, t) -> Environment.define env s t);
+  List.iter decls ~f:(fun (name, term, _) -> Environment.define env name term);
   let main = match Environment.get env "main" with
     | Some x -> x
     | None ->  failwith "No main function"
   in
   try
-    let typeof = Types.Typ.Con "nope" in
+    let typeof = Types.Inference.typecheck_program decls in
     let t' = Interpreter.interpret num_threads env main in
     let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
     

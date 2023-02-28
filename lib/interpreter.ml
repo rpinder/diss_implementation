@@ -47,6 +47,7 @@ let rec convert_mvar t env internal_seen term =
      Ast.Abs(fi, s, e1')
   | Ast.BinOp (fi, e1, e2, op) -> Ast.BinOp (fi, convert_mvar t env internal_seen e1, convert_mvar t env internal_seen e2, op)
   | Ast.Int _ as i -> i
+  | Ast.Bool _ as b -> b
   | Ast.Box (fi, t1) -> Ast.Box (fi, convert_mvar t env internal_seen t1)
   | x -> failwith ("convert_mvar not yet implemented for " ^ (Ast.to_string x))
                           

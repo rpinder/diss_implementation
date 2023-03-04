@@ -17,6 +17,7 @@ module Typ = struct
     | Con of string
     | Arr of t * t
     | Box of t
+    | List of t
   [@@deriving equal]
 
   let rec to_string = function
@@ -25,6 +26,7 @@ module Typ = struct
     | Arr (Arr _ as t1, t2) -> "(" ^ (to_string t1) ^ ") -> " ^ (to_string t2)
     | Arr (t1, t2) -> (to_string t1) ^ " -> " ^ (to_string t2)
     | Box t1 -> "box (" ^ to_string t1 ^ ")"
+    | List t1 -> "list (" ^ to_string t1 ^ ")"
 end
 
 type scheme = Forall of Var.t list * Typ.t
@@ -44,6 +46,7 @@ let rec type_ftv = function
   | Typ.Con _ -> Set.empty (module Var)
   | Typ.Arr (t1, t2) -> Set.union (type_ftv t1) (type_ftv t2)
   | Typ.Box t1 -> type_ftv t1
+  | Typ.List t1 -> type_ftv t1
 
 let rec type_apply s = function
   | Typ.Var n as v ->
@@ -52,6 +55,7 @@ let rec type_apply s = function
       | None -> v)             
   | Typ.Arr (t1, t2) -> Typ.Arr (type_apply s t1, type_apply s t2)
   | Typ.Box t1 -> Typ.Box (type_apply s t1)
+  | Typ.List t1 -> Typ.List (type_apply s t1)
   | Typ.Con _ as x -> x
 
 let scheme_ftv (Forall (vars, typ)) =
@@ -145,6 +149,7 @@ module Inference = struct
       | (t, Typ.Var v) -> var_bind v t, []
       | (Typ.Arr (t1, t2), Typ.Arr (t3, t4)) -> unify_list [t1; t2] [t3; t4]
       | (Typ.Box t1, Typ.Box t2) -> unifies t1 t2
+      | (Typ.List t1, Typ.List t2) -> unifies t1 t2
       | _ -> raise (TypeError (Printf.sprintf "Unification failed - Cannot unify\n  %s\nwith\n  %s\n" (Typ.to_string t1) (Typ.to_string t2)))
     and unify_list l1 l2 : unifier =
       match (l1, l2) with
@@ -233,6 +238,22 @@ module Inference = struct
       | Ast.Box (_, e1) ->
          let t1 = infer t globalenv (Map.empty (module Var)) e1 in
          Typ.Box t1
+      | Ast.Nil ->
+         let tv = Fresh.gen () in
+         Typ.List tv
+      | Ast.Cons (_, e1, e2) ->
+         let t1 = infer t globalenv env e1 in
+         let t2 = infer t globalenv env e2 in
+         add_constraint t (Typ.List t1, t2);
+         Typ.List t1
+      | Ast.Case (_, e1, e2, e3) ->
+         let t1 = infer t globalenv env e1 in
+         let tv = Fresh.gen () in
+         add_constraint t (Typ.List tv, t1);
+         let t2 = infer t globalenv env e2 in
+         let t3 = infer t globalenv env e3 in
+         add_constraint t (Typ.Arr (tv, Typ.Arr (Typ.List tv, t2)), t3);
+         t2
       | _ -> failwith "Not yet implemented"
 
     (* change this to support any number *)
@@ -244,6 +265,7 @@ module Inference = struct
         | Typ.Arr (t1, t2) -> Typ.Arr (normtype t1, normtype t2)
         | Typ.Con _ as x -> x
         | Typ.Box x -> Typ.Box (normtype x)
+        | Typ.List x -> Typ.List (normtype x)
         | Typ.Var a ->
            (match Caml.List.assoc_opt a ord with
             | Some x -> Typ.Var (V x)

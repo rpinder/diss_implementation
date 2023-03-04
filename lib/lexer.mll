@@ -29,6 +29,12 @@ rule read =
   | "if" { IF }
   | "then" { THEN }
   | "else" { ELSE }
+  | "nil" { NIL }
+  | "list" { LIST }
+  | "case" { CASE }
+  | "of" { OF }
+  | "::" { CONS }
+  | "|" { PIPE }
   | "==" { EQUALITY }
   | "!=" { NOTEQUALITY }
   | ">" { GREATERTHAN }

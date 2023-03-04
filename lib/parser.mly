@@ -13,6 +13,7 @@ let rec unroll args body =
 %token <string> ID
 %token INT
 %token BOOL
+%token LIST
 %token COLON
 %token ARROW
 %token SLASH
@@ -41,31 +42,43 @@ let rec unroll args body =
 %token BOX
 %token BACKARROW
 %token FN
+%token NIL
+%token CONS
+%token CASE
+%token OF
+%token PIPE
 
 %token APP
 
 %right ARROW
 %nonassoc DOT
-%right IN
+%right IN PIPE
 %nonassoc ELSE
 %left EQUALITY NOTEQUALITY
 %left LESSTHAN GREATERTHAN GTEQ LTEQ
+%nonassoc NIL
+%nonassoc LIST
+%right CONS
 %nonassoc BOX
 %left PLUS MINUS
 %left MULTIPLY
-%nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF
+%nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF CASE
 %nonassoc APP
 
 %start <(string * Ast.t * Typ.t) list> prog
 %start <Ast.t option> single
 
 %type <Ast.t> term
+%type <Typ.t> typ
+%type <Typ.t> types
+%type <string * Ast.t * Typ.t> declaration
+%type <(string * Ast.t * Typ.t) list> list(declaration)
+%type <string list> list(ID)
 
 %%
 
 prog:
-  | EOF { [] }
-  | defns = list(declaration) EOF { defns }
+  | defns = list(declaration); EOF { defns }
   ;
 
 single:
@@ -85,6 +98,7 @@ types:
   | t = typ { t }
   | t1 = types; ARROW; t2 = types { Typ.Arr (t1,t2) }
   | BOX; t = types { Typ.Box t } 
+  | LIST; t = types { Typ.List t } 
   | BOPEN; t = types; BCLOSE { t }
 
 %inline binop:
@@ -111,6 +125,9 @@ term:
   | LET; BOX; s = ID; BACKARROW; t1 = term; IN; t2 = term { Ast.LetBox (empty_info, s, t1, t2)}
   | BOPEN; t = term; BCLOSE { t }
   | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Ast.If (empty_info, b, t1, t2)}
+  | NIL { Ast.Nil }
+  | t1 = term; CONS; t2 = term { Ast.Cons (empty_info, t1, t2) }
+  | CASE; t1 = term; OF; PIPE; t2 = term; PIPE t3 = term { Ast.Case (empty_info, t1, t2, t3)}
   | t1 = term; t2 = term %prec APP { Ast.App (empty_info, t1, t2)}
   ;
 

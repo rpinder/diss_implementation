@@ -14,6 +14,9 @@ type t =
   | NEq of info * t * t
   | LetBox of info * string * t * t
   | Box of info * t
+  | Nil
+  | Cons of info * t * t
+  | Case of info * t * t * t
 and op =
   | Plus
   | Minus

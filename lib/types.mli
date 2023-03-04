@@ -12,6 +12,7 @@ module Typ : sig
     | Con of string
     | Arr of t * t
     | Box of t
+    | List of t
   [@@deriving equal]
 
   val to_string : t -> string

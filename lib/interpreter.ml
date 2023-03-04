@@ -158,6 +158,20 @@ let rec eval t pool env term =
   | Ast.Box (fi, t1) ->
      let t1' = convert_mvar t env (Set.empty (module String)) t1 in
      Ast.Box (fi, t1') 
+  | Ast.Nil -> Ast.Nil
+  | Ast.Cons (fi, e1, e2) ->
+     let e1' = eval t pool env e1 in
+     let e2' = eval t pool env e2 in
+     Ast.Cons (fi, e1', e2')
+  | Ast.Case (fi, e1, empty_case, other_case) ->
+     let e1' = eval t pool env e1 in
+     (match e1' with
+     | Ast.Nil -> eval t pool env empty_case
+     | Ast.Cons (_, a, b) ->
+        let other_case' = eval t pool env other_case in
+        let e2 = Ast.App (fi, Ast.App (fi, other_case', a), b)in
+        eval t pool env e2
+     | _ -> raise (RuntimeError ("Non list type used in case")))
 
 let interpret n env term =
   let pool = T.setup_pool ~num_domains:n () in

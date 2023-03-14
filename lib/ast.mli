@@ -14,6 +14,7 @@ type t =
   | NEq of info * t * t
   | LetBox of info * string * t * t
   | Box of info * t
+  | OBox of t
   | Nil
   | Cons of info * t * t
   | Case of info * t * t * t

@@ -62,6 +62,18 @@ let rec to_string = function
   | Box (_, t1) -> Printf.sprintf "box (%s)" (to_string t1)
   | OBox t1 -> Printf.sprintf "obox (%s)" (to_string t1)
   | Nil -> "nil"
-  | Cons (_, t1, t2) -> Printf.sprintf "%s :: %s" (to_string t1) (to_string t2)
+  | Cons _ as c -> Printf.sprintf "[%s]" (list_to_string (to_ocaml_list c))
   | Case _ -> ""
+and list_to_string xs =
+  match xs with
+  | y :: [] -> Printf.sprintf "%s" (to_string y)
+  | y :: ys -> Printf.sprintf "%s, %s" (to_string y) (list_to_string ys)
+  | [] -> ""
+and to_ocaml_list xs =
+  match xs with
+  | Cons (_, t1, t2) -> t1 :: to_ocaml_list t2
+  | Nil -> []
+  | _ -> failwith "TO_OCAML_LIST"
+
+
 let empty_info = { line_number = 0; column_number = 0 }

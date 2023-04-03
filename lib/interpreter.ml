@@ -47,11 +47,20 @@ let rec convert_mvar t pool env internal_seen term =
      let internal' = Set.add internal_seen s in
      let e1' = convert_mvar t pool env internal' e1 in
      Ast.Abs(fi, s, e1')
+  (* | Ast.Cls (fi, s, e1, _) -> *)
+  (*    let internal' = Set.add internal_seen s in *)
+  (*    let e1' = convert_mvar t pool env internal' e1 in *)
+  (*    Ast.Cls (fi, s, e1', Environment.create ()) *)
   | Ast.BinOp (fi, e1, e2, op) -> Ast.BinOp (fi, convert_mvar t pool env internal_seen e1, convert_mvar t pool env internal_seen e2, op)
   | Ast.Int _ as i -> i
   | Ast.Bool _ as b -> b
   | Ast.Box (fi, t1) -> Ast.Box (fi, convert_mvar t pool env internal_seen t1)
-  | x -> failwith ("convert_mvar not yet implemented for " ^ (Ast.to_string x))
+  | Ast.Nil -> Ast.Nil
+  | Ast.Cons (fi, t1, t2) -> Ast.Cons (fi, convert_mvar t pool env internal_seen t1, convert_mvar t pool env internal_seen t2)
+  | Ast.LetBox (fi, s, t1, t2) ->
+     let internal' = Set.add internal_seen s in
+     Ast.LetBox (fi, s, convert_mvar t pool env internal_seen t1, convert_mvar t pool env internal' t2)
+  | x -> raise (RuntimeError ("convert_mvar not yet implemented for " ^ (Ast.to_string x)))
 
 and make_mvar t pool term = 
   match term with
@@ -85,8 +94,21 @@ and force_obox t pool term =
      let t1' = T.await pool t1 in
      let t2' = T.await pool t2 in
      Ast.BinOp (fi, t1', t2', op)
+  | Ast.App (fi, t1, t2) ->
+     let t1 = T.async pool (fun _ -> force_obox t pool t1) in
+     let t2 = T.async pool (fun _ -> force_obox t pool t2) in
+     let t1' = T.await pool t1 in
+     let t2' = T.await pool t2 in
+     Ast.App (fi, t1', t2')
+  (* | Ast.Abs (fi, s, t1) -> *)
+  (*   let t1 = T.async pool (fun _ -> force_obox t pool t1) in *)
+  (*   let t1' = T.await pool t1 in *)
+  (*   Ast.Abs(fi, s, t1') *)
   | Ast.Int _ as i -> i
   | Ast.Bool _ as b -> b
+  | Ast.Box (fi, t1) -> Ast.Box (fi, force_obox t pool t1)
+  | Ast.MVar _ as c -> eval t pool (Environment.create ()) c
+  | Ast.Cls (t1, env) -> eval t pool env t1
   | x -> raise (RuntimeError ("force_obox not implemented: " ^ (Ast.to_string x)))
 and eval t pool env term = 
   match term with
@@ -128,7 +150,7 @@ and eval t pool env term =
      Environment.define env' param arg';
      eval t pool env' body
   | Ast.App (fi, t1, t2) ->
-     let t1 = eval t pool env t1 in
+     let t1 = mvar_or_not t pool (eval t pool env t1) in
      let t2 = eval t pool env t2 in
      eval t pool env (Ast.App (fi, t1, t2))
   | Ast.Let (_, name, body, rest) ->
@@ -215,6 +237,7 @@ and eval t pool env term =
         let other_case' = eval t pool env other_case in
         let e2 = Ast.App (fi, Ast.App (fi, other_case', a), b)in
         eval t pool env e2
+     | Ast.OBox _ as b -> eval t pool env (Ast.Case (fi, make_mvar t pool b, empty_case, other_case))
      | _ -> raise (RuntimeError ("Non list type used in case")))
 
 let interpret n env term =

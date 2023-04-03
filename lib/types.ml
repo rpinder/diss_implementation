@@ -162,6 +162,11 @@ module Inference = struct
 
     let rec solver (u : unifier) =
       let (su, cs) = u in
+      (* Out_channel.output_string stdout ("---------------\n"); *)
+      (* Out_channel.output_string stdout (">>SUBST<<\n"); *)
+      (* Map.iteri su ~f:(fun ~key ~data -> Out_channel.output_string stdout ((Typ.to_string (Typ.Var key)) ^ " and " ^ (Typ.to_string data) ^ "\n")); *)
+      (* Out_channel.output_string stdout (">>CONSTRAINTS<<\n"); *)
+      (* List.iter cs ~f:(fun (a, b) -> Out_channel.output_string stdout ((Typ.to_string a) ^ " and " ^ (Typ.to_string b) ^ "\n")); *)
       match cs with
       | [] -> su
       | ((t1, t2) :: cs0) ->
@@ -190,7 +195,10 @@ module Inference = struct
          let sub = solver (emptysubst, t'.constraints) in
          let t1 = type_apply sub t0 in
          let sc = generalise env t1 in
+         let Forall (_, body) = sc in
+         Out_channel.output_string stdout (":: " ^ Typ.to_string body ^ "\n");
          let env' = Map.add_exn env ~key:(V x) ~data:sc in
+         List.iter t'.constraints ~f:(fun cs -> add_constraint t cs);
          let t2 = infer t globalenv env' e2 in
          t2
       | Ast.LetRec (_, x, e1, e2) ->
@@ -259,7 +267,7 @@ module Inference = struct
     (* change this to support any number *)
     let letters = ["a";"b";"c";"d";"e";"f";"g";"h";"i";"j";"k";"l";"m";"n";"o";"p";"q";"r";"s";"t";"u";"v";"w";"x";"y";"z"]
 
-    let normalise ((Forall (_, body)) : scheme) : scheme =
+    let _normalise ((Forall (_, body)) : scheme) : scheme =
       let ord = List.mapi (Set.to_list (type_ftv body)) ~f:(fun i x -> (x, List.nth_exn letters i)) in
       let rec normtype = function
         | Typ.Arr (t1, t2) -> Typ.Arr (normtype t1, normtype t2)
@@ -278,8 +286,8 @@ module Inference = struct
       let t = create () in
       let typ = infer t empty_env empty_env ex in
       let subst = solver (emptysubst, t.constraints) in
-      let Forall (_, body) = normalise (generalise empty_env (type_apply subst typ)) in
-      body
+      (* let Forall (_, body) = normalise (generalise empty_env *) (type_apply subst typ) (* ) in
+      body *)
 
     let rec zip_different_lengths xs ys =
       match (xs, ys) with
@@ -303,6 +311,7 @@ module Inference = struct
       in
       let empty_env = Map.empty (module Var) in
       List.iter decls ~f:(fun (name, term, _) ->
+          Out_channel.output_string stdout ("\n" ^ name ^ "\n");
           try 
           let t = create () in
           let typ = infer t globalenv empty_env term in
@@ -310,7 +319,7 @@ module Inference = struct
           let subst = solver (emptysubst, t.constraints) in
           (* let t2 = create () in *)
           (* add_constraint t2 (type_apply subst typ, instantiate (Map.find_exn globalenv (Var.V name))); *)
-          (* List.iter t2.constraints ~f:(fun (a, b) -> Out_channel.output_string stdout ((Typ.to_string a) ^ " and " ^ (Typ.to_string b) ^ "\n")); *)
+          List.iter t.constraints ~f:(fun (a, b) -> Out_channel.output_string stdout ((Typ.to_string a) ^ " and " ^ (Typ.to_string b) ^ "\n"));
           (* let _subst2 = solver (emptysubst, t2.constraints) in () *)
           check_same (Map.find_exn globalenv (Var.V name)) (generalise empty_env (type_apply subst typ))
           with

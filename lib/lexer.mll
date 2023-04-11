@@ -9,7 +9,7 @@ exception SyntaxError of string
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 
-let intlit = ['0'-'9'] ['0'-'9']*
+let intlit = '-'? ['0'-'9']+
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 rule read =
@@ -24,7 +24,6 @@ rule read =
   | "bool" { BOOL }
   | "box" { BOX }
   | "let" { LET }
-  | "rec" { REC }
   | "in" { IN }
   | "if" { IF }
   | "then" { THEN }

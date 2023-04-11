@@ -1,0 +1,17 @@
+a => box a
+\x. M => box (\a. let box x <- a in M*)
+M N => let box f <- M in f N*
+M + N => let box m <- M* in let box n <- N* in box (m + n)
+
+(\x. x + 5) 7
+
+let box f <= (\x. x + 5)* in f (7)*
+
+(7)* = box 7
+
+(\x. x + 5)* = box (\a. let box x <= a in (x + 5)*)
+               box (\a. let box x <= a in (let box m <= x* in let box n <= 5* in box (m + n)))
+               box (\a. let box x <= a in (let box m <= box x in let box n <= box 5 in box (m + n)))
+
+
+let box f <- box (\a. let box x <- a in let box m <- box x in let box n <- box 5 in box (m + n)) in f (box 7)

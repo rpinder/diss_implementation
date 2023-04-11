@@ -1,5 +1,5 @@
 fn main : int =
-  fact 5
+  fact 15
 
 fn fact x : int -> int =
   if x == 0 then

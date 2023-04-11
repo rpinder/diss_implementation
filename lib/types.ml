@@ -175,60 +175,47 @@ module Inference = struct
 
     let rec infer t globalenv env ex =
       match ex with
-      | Ast.Int _ -> Typ.Con "int"
-      | Ast.Bool _ -> Typ.Con "bool"
-      | Ast.Var (_, x) -> lookupEnv globalenv env (V x)
-      | Ast.Abs (_, x, e) ->
+      | Ast.IInt _ -> Typ.Con "int"
+      | Ast.IBool _ -> Typ.Con "bool"
+      | Ast.IVar (_, x) -> lookupEnv globalenv env (V x)
+      | Ast.IAbs (_, x, e) ->
          let tv = Fresh.gen () in
          let env' = Map.add_exn env ~key:(V x) ~data:(Forall ([], tv)) in
          let t = infer t globalenv env' e in
          Typ.Arr (tv, t)
-      | Ast.App (_, e1, e2) ->
+      | Ast.IApp (_, e1, e2) ->
          let t1 = infer t globalenv env e1 in
          let t2 = infer t globalenv env e2 in
          let tv = Fresh.gen () in
          add_constraint t (t1, Typ.Arr (t2, tv));
          tv
-      | Ast.Let (_, x, e1, e2) ->
+      | Ast.ILet (_, x, e1, e2) ->
          let t' = create () in
          let t0 = infer t' globalenv env e1 in
          let sub = solver (emptysubst, t'.constraints) in
          let t1 = type_apply sub t0 in
          let sc = generalise env t1 in
-         let Forall (_, body) = sc in
-         Out_channel.output_string stdout (":: " ^ Typ.to_string body ^ "\n");
+         (* let Forall (_, body) = sc in *)
+         (* Out_channel.output_string stdout (":: " ^ Typ.to_string body ^ "\n"); *)
          let env' = Map.add_exn env ~key:(V x) ~data:sc in
          List.iter t'.constraints ~f:(fun cs -> add_constraint t cs);
          let t2 = infer t globalenv env' e2 in
          t2
-      | Ast.LetRec (_, x, e1, e2) ->
-         let t' = create () in
-         let tv = Fresh.gen () in
-         let gen = generalise env tv in
-         let env' = Map.add_exn env ~key:(V x) ~data:gen in
-         let t0 = infer t' globalenv env' e1 in
-         add_constraint t' (tv, t0);
-         let sub = solver (emptysubst, t'.constraints) in
-         let t1 = type_apply sub t0 in
-         let sc = generalise env t1 in
-         let env'' = Map.set env' ~key:(V x) ~data:sc in
-         let t2 = infer t globalenv env'' e2 in
-         t2
-      | Ast.If (_, pred, e1, e2) ->
+      | Ast.IIf (_, pred, e1, e2) ->
          let tpred = infer t globalenv env pred in
          add_constraint t (tpred, Typ.Con "bool");
          let t1 = infer t globalenv env e1 in
          let t2 = infer t globalenv env e2 in
          add_constraint t (t1, t2);
          t1
-      | Ast.Eq (_, e1, e2) | Ast.NEq (_, e1, e2) ->
+      | Ast.IEq (_, e1, e2) | Ast.INEq (_, e1, e2) ->
          let t1 = infer t globalenv env e1 in
          let t2 = infer t globalenv env e2 in
          add_constraint t (t1, t2);
          let tv = Fresh.gen () in
          add_constraint t (tv, Typ.Con "bool");
          tv
-      | Ast.BinOp (_, e1, e2, op) ->
+      | Ast.IBinOp (_, e1, e2, op) ->
          let t1 = infer t globalenv env e1 in
          let t2 = infer t globalenv env e2 in
          let tv = Fresh.gen () in
@@ -236,25 +223,25 @@ module Inference = struct
          let u2 = binops op in
          add_constraint t (u1, u2);
          tv
-      | Ast.LetBox (_, x, e1, e2) ->
+      | Ast.ILetBox (_, x, e1, e2) ->
          let t1 = infer t globalenv env e1 in
          let tv = Fresh.gen () in
          add_constraint t (t1, Typ.Box tv);
          let globalenv' = Map.add_exn globalenv ~key: (V x) ~data:(Forall ([], tv)) in
          let t2 = infer t globalenv' env e2 in
          t2
-      | Ast.Box (_, e1) ->
+      | Ast.IBox (_, e1) ->
          let t1 = infer t globalenv (Map.empty (module Var)) e1 in
          Typ.Box t1
-      | Ast.Nil ->
+      | Ast.INil (_) ->
          let tv = Fresh.gen () in
          Typ.List tv
-      | Ast.Cons (_, e1, e2) ->
+      | Ast.ICons (_, e1, e2) ->
          let t1 = infer t globalenv env e1 in
          let t2 = infer t globalenv env e2 in
          add_constraint t (Typ.List t1, t2);
          Typ.List t1
-      | Ast.Case (_, e1, e2, e3) ->
+      | Ast.ICase (_, e1, e2, e3) ->
          let t1 = infer t globalenv env e1 in
          let tv = Fresh.gen () in
          add_constraint t (Typ.List tv, t1);
@@ -262,7 +249,6 @@ module Inference = struct
          let t3 = infer t globalenv env e3 in
          add_constraint t (Typ.Arr (tv, Typ.Arr (Typ.List tv, t2)), t3);
          t2
-      | _ -> failwith "Not yet implemented"
 
     (* change this to support any number *)
     let letters = ["a";"b";"c";"d";"e";"f";"g";"h";"i";"j";"k";"l";"m";"n";"o";"p";"q";"r";"s";"t";"u";"v";"w";"x";"y";"z"]
@@ -311,7 +297,9 @@ module Inference = struct
       in
       let empty_env = Map.empty (module Var) in
       List.iter decls ~f:(fun (name, term, _) ->
-          Out_channel.output_string stdout ("\n" ^ name ^ "\n");
+          let term2 = Godel.transform term in
+          Out_channel.output_string stdout ("\n" ^ name ^ "\n" ^ (Ast.to_string ((term2))) ^ "\n");
+          Out_channel.output_string stdout ("\n" ^ name ^ "\n" ^ (Ast.to_string (Interpreter.optimize (term2))) ^ "\n");
           try 
           let t = create () in
           let typ = infer t globalenv empty_env term in
@@ -319,7 +307,7 @@ module Inference = struct
           let subst = solver (emptysubst, t.constraints) in
           (* let t2 = create () in *)
           (* add_constraint t2 (type_apply subst typ, instantiate (Map.find_exn globalenv (Var.V name))); *)
-          List.iter t.constraints ~f:(fun (a, b) -> Out_channel.output_string stdout ((Typ.to_string a) ^ " and " ^ (Typ.to_string b) ^ "\n"));
+          (* List.iter t.constraints ~f:(fun (a, b) -> Out_channel.output_string stdout ((Typ.to_string a) ^ " and " ^ (Typ.to_string b) ^ "\n")); *)
           (* let _subst2 = solver (emptysubst, t2.constraints) in () *)
           check_same (Map.find_exn globalenv (Var.V name)) (generalise empty_env (type_apply subst typ))
           with

@@ -20,6 +20,6 @@ end
 module Inference : sig
   type t
 
-  val typeof : Ast.t -> Typ.t
-  val typecheck_program : (string * Ast.t * Typ.t) list -> Typ.t
+  val typeof : Ast.infoAST -> Typ.t
+  val typecheck_program : (string * Ast.infoAST * Typ.t) list -> Typ.t
 end 

@@ -5,7 +5,7 @@ open Types
 let rec unroll args body =
   match args with
   | [] -> body
-  | x :: xs -> Ast.Abs (empty_info, x, unroll xs body)
+  | x :: xs -> Ast.IAbs (empty_info, x, unroll xs body)
 
 %}
 
@@ -38,7 +38,6 @@ let rec unroll args body =
 %token GTEQ
 %token LTEQ
 %token NOTEQUALITY
-%token REC
 %token BOX
 %token BACKARROW
 %token FN
@@ -60,19 +59,19 @@ let rec unroll args body =
 %nonassoc LIST
 %right CONS
 %nonassoc BOX
-%left PLUS MINUS
-%left MULTIPLY
+%left PLUS
+%left MULTIPLY MINUS
 %nonassoc INTLIT TRUE FALSE ID SLASH LET BOPEN IF CASE
 %nonassoc APP
 
-%start <(string * Ast.t * Typ.t) list> prog
-%start <Ast.t option> single
+%start <(string * Ast.infoAST * Typ.t) list> prog
+%start <Ast.infoAST option> single
 
-%type <Ast.t> term
+%type <Ast.infoAST> term
 %type <Typ.t> typ
 %type <Typ.t> types
-%type <string * Ast.t * Typ.t> declaration
-%type <(string * Ast.t * Typ.t) list> list(declaration)
+%type <string * Ast.infoAST * Typ.t> declaration
+%type <(string * Ast.infoAST * Typ.t) list> list(declaration)
 %type <string list> list(ID)
 
 %%
@@ -111,24 +110,23 @@ types:
   | GTEQ { Ast.GTEQ }
 
 term:
-  | t1 = term; op = binop; t2 = term { Ast.BinOp (empty_info, t1, t2, op)}
-  | i = INTLIT { Ast.Int (empty_info, i) }
-  | t1 = term; EQUALITY; t2 = term { Ast.Eq (empty_info, t1, t2)}
-  | t1 = term; NOTEQUALITY; t2 = term { Ast.NEq (empty_info, t1, t2)}
-  | TRUE { Ast.Bool (empty_info, true) }
-  | FALSE { Ast.Bool (empty_info, false) }
-  | s = ID { Ast.Var (empty_info, s) }
-  | SLASH; arg = ID; DOT; body = term { Ast.Abs (empty_info, arg, body) }
-  | BOX; t1 = term { Ast.Box (empty_info, t1) }
-  | LET; s = ID; EQUAL; t1 = term; IN; t2 = term { Ast.Let (empty_info, s, t1, t2)}
-  | LET; REC; s = ID; EQUAL; t1 = term; IN; t2 = term { Ast.LetRec (empty_info, s, t1, t2)}
-  | LET; BOX; s = ID; BACKARROW; t1 = term; IN; t2 = term { Ast.LetBox (empty_info, s, t1, t2)}
+  | t1 = term; op = binop; t2 = term { Ast.IBinOp (empty_info, t1, t2, op)}
+  | i = INTLIT { Ast.IInt (empty_info, i) }
+  | t1 = term; EQUALITY; t2 = term { Ast.IEq (empty_info, t1, t2)}
+  | t1 = term; NOTEQUALITY; t2 = term { Ast.INEq (empty_info, t1, t2)}
+  | TRUE { Ast.IBool (empty_info, true) }
+  | FALSE { Ast.IBool (empty_info, false) }
+  | s = ID { Ast.IVar (empty_info, s) }
+  | SLASH; arg = ID; DOT; body = term { Ast.IAbs (empty_info, arg, body) }
+  | BOX; t1 = term { Ast.IBox (empty_info, t1) }
+  | LET; s = ID; EQUAL; t1 = term; IN; t2 = term { Ast.ILet (empty_info, s, t1, t2)}
+  | LET; BOX; s = ID; BACKARROW; t1 = term; IN; t2 = term { Ast.ILetBox (empty_info, s, t1, t2)}
   | BOPEN; t = term; BCLOSE { t }
-  | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Ast.If (empty_info, b, t1, t2)}
-  | NIL { Ast.Nil }
-  | t1 = term; CONS; t2 = term { Ast.Cons (empty_info, t1, t2) }
-  | CASE; t1 = term; OF; PIPE; t2 = term; PIPE t3 = term { Ast.Case (empty_info, t1, t2, t3)}
-  | t1 = term; t2 = term %prec APP { Ast.App (empty_info, t1, t2)}
+  | IF; b = term; THEN; t1 = term; ELSE; t2 = term { Ast.IIf (empty_info, b, t1, t2)}
+  | NIL { Ast.INil empty_info }
+  | t1 = term; CONS; t2 = term { Ast.ICons (empty_info, t1, t2) }
+  | CASE; t1 = term; OF; PIPE; t2 = term; PIPE t3 = term { Ast.ICase (empty_info, t1, t2, t3)}
+  | t1 = term; t2 = term %prec APP { Ast.IApp (empty_info, t1, t2)}
   ;
 
 

@@ -1,23 +1,38 @@
 type t =
-  | Var of info * string
-  | MVar of info * int
-  | Int of info * int
-  | Bool of info * bool
-  | Abs of info * string * t
-  | App of info * t * t
-  | Let of info * string * t * t
-  | LetRec of info * string * t * t
+  | Var of string
+  | MVar of int
+  | Int of int
+  | Bool of bool
+  | Abs of string * t
+  | App of t * t
+  | Let of string * t * t
   | Cls of t * t Environment.t
-  | If of info * t * t * t
-  | BinOp of info * t * t * op
-  | Eq of info * t * t
-  | NEq of info * t * t
-  | LetBox of info * string * t * t
-  | Box of info * t
+  | If of t * t * t
+  | BinOp of t * t * op
+  | Eq of t * t
+  | NEq of t * t
+  | LetBox of string * t * t
+  | Box of t
   | OBox of t
   | Nil
-  | Cons of info * t * t
-  | Case of info * t * t * t
+  | Cons of t * t
+  | Case of t * t * t
+and infoAST =
+  | IVar of info * string
+  | IInt of info * int
+  | IBool of info * bool
+  | IAbs of info * string * infoAST
+  | IApp of info * infoAST * infoAST
+  | ILet of info * string * infoAST * infoAST
+  | IIf of info * infoAST * infoAST * infoAST
+  | IBinOp of info * infoAST * infoAST * op
+  | IEq of info * infoAST * infoAST
+  | INEq of info * infoAST * infoAST
+  | ILetBox of info * string * infoAST * infoAST
+  | IBox of info * infoAST
+  | INil of info
+  | ICons of info * infoAST * infoAST
+  | ICase of info * infoAST * infoAST * infoAST
 and op =
   | Plus
   | Minus
@@ -36,4 +51,6 @@ val empty_info : info
 val equal : t -> t -> bool
 
 val to_string : t -> string
+val info_to_string : infoAST -> string
+val convert : infoAST -> t
 

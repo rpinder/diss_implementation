@@ -57,24 +57,30 @@ let rec replace_variable term v_old v_new =
      Out_channel.output_string stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush stdout;
      x
 
-(* let rec replace term v_old new_term = *)
-(*   match term with *)
-(*   | Ast.Var v when String.(=) v v_old -> new_term *)
-(*   | Ast.Var _ as v -> v *)
-(*   | Ast.LetBox (v, t1, t2) when String.(=) v v_old-> Ast.LetBox (v_new, replace t1 v_old v_new, replace t2 v_old v_new) *)
-(*   | Ast.LetBox (v, t1, t2) when String.(=) v v_new -> Ast.LetBox (v_new, replace t1 v_old v_new, t2) *)
-(*   | Ast.LetBox (v, t1, t2) -> Ast.LetBox (v, replace t1 v_old v_new, replace t2 v_old v_new) *)
-(*   | Ast.Abs (v, t1) when String.(=) v v_old -> Ast.Abs (v_new, replace t1 v_old v_new) *)
-(*   | Ast.Abs (v, t1) when String.(=) v v_new -> Ast.Abs (v_new, t1) *)
-(*   | Ast.Abs (v, t1) -> Ast.Abs (v, replace t1 v_old v_new) *)
-(*   | x -> x *)
-
+let rec replace_variable_term term v_old new_term =
+  match term with
+  | Ast.Var v when String.(=) v v_old -> new_term
+  | Ast.Var _ as v -> v
+  | Ast.LetBox (v, t1, t2) when String.(=) v v_old ->
+     Ast.LetBox (v, replace_variable_term t1 v_old new_term, t2)
+  | Ast.LetBox (v, t1, t2) ->
+     Ast.LetBox (v, replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.Abs (v, t1) -> Ast.Abs (v, replace_variable_term t1 v_old new_term)
+  | Ast.App (t1, t2) -> Ast.App (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.BinOp (t1, t2, op) ->
+     Out_channel.output_string stdout ("BINOP: " ^ Ast.to_string t1 ^ " and " ^ Ast.to_string t2 ^ "\n"); Out_channel.flush stdout;
+     Ast.BinOp (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, op)
+  | Ast.If (t1, t2, t3) -> Ast.If (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, replace_variable_term t3 v_old new_term)
+  | Ast.Box x -> Ast.Box (replace_variable_term x v_old new_term)
+  | x ->
+     Out_channel.output_string stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush stdout;
+     x
 
 let rec optimize term =
   match term with
   | Ast.LetBox (v1, Ast.Box (Ast.Var v2), t2) -> optimize (replace_variable t2 v1 v2)
-  (* | Ast.LetBox (v1, Ast.Box (Ast.Int _ as i), t2) -> (\* Ast.Let (v1, i, optimize t2) *\) *)
-  (* | Ast.LetBox (v1, Ast.Box (Ast.Bool _ as b), t2) -> Ast.Let (v1, b, optimize t2) *)
+  | Ast.LetBox (v1, Ast.Box (Ast.Int _ as i), t2) -> optimize (replace_variable_term t2 v1 i) 
+  | Ast.LetBox (v1, Ast.Box (Ast.Bool _ as b), t2) -> optimize (replace_variable_term t2 v1 b)
   | Ast.LetBox (v1, t1, t2) -> Ast.LetBox (v1, optimize t1, optimize t2)
   | Ast.Box x -> Ast.Box (optimize x)
   | Ast.Abs (s, t1) -> Ast.Abs (s, optimize t1)

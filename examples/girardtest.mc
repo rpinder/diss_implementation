@@ -1,5 +1,5 @@
 fn main : int =
-  fib 1
+  fib 10
 
 
 fn fib x : int -> int =

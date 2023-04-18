@@ -1,7 +1,7 @@
-fn ackermann m n : int -> int -> int =
-  if m < 1 then n + 1
-  else if n < 1 then ackermann (m - 1) 1
-  else ackermann (m - 1) (ackermann m (n - 1))
+fn ackermann a b : int -> int -> int =
+  if a < 1 then b + 1
+  else if b < 1 then ackermann (a - 1) 1
+  else ackermann (a - 1) (ackermann a (b - 1)) 
 
 fn main : int =
   ackermann 3 3

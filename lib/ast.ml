@@ -81,8 +81,8 @@ let rec to_string = function
   | BinOp (t1, t2, op) -> Printf.sprintf "(%s %s %s)" (to_string t1) (op_to_string op) (to_string t2)
   | Eq (t1, t2) -> Printf.sprintf "(%s == %s)" (to_string t1) (to_string t2)
   | NEq (t1, t2) -> Printf.sprintf "(%s != %s)" (to_string t1) (to_string t2)
-  | LetBox (s, t1, t2) -> Printf.sprintf "(let box %s = %s in %s)" s (to_string t1) (to_string t2)
-  | Box (t1) -> Printf.sprintf "box (%s)" (to_string t1)
+  | LetBox (s, t1, t2) -> Printf.sprintf "(let box %s <- %s in %s)" s (to_string t1) (to_string t2)
+  | Box (t1) -> Printf.sprintf "(box (%s))" (to_string t1)
   | OBox t1 -> Printf.sprintf "obox (%s)" (to_string t1)
   | Nil -> "nil"
   | Cons (t1, t2) -> Printf.sprintf "%s :: %s" (to_string t1) (to_string t2)
@@ -105,7 +105,7 @@ and info_to_string = function
   | IBinOp (_, t1, t2, op) -> Printf.sprintf "(%s %s %s)" (info_to_string t1) (op_to_string op)(info_to_string t2)
   | IEq (_, t1, t2) -> Printf.sprintf "(%s == %s)" (info_to_string t1) (info_to_string t2)
   | INEq (_, t1, t2) -> Printf.sprintf "(%s != %s)" (info_to_string t1) (info_to_string t2)
-  | ILetBox (_, s, t1, t2) -> Printf.sprintf "(let box %s = %s in %s)" s (info_to_string t1) (info_to_string t2)
+  | ILetBox (_, s, t1, t2) -> Printf.sprintf "(let box %s <- %s in %s)" s (info_to_string t1) (info_to_string t2)
   | IBox (_, t1) -> Printf.sprintf "box (%s)" (info_to_string t1)
   | INil _ -> "nil"
   | ICons _ as c -> Printf.sprintf "[%s]" (list_to_string (to_ocaml_list (convert c)))

@@ -19,6 +19,9 @@ type t =
   | Nil
   | Cons of t * t
   | Case of t * t * t
+  | NilP
+  | ConsP of t * t
+  | CaseP of t * t * t
 and infoAST =
   | IVar of info * string
   | IInt of info * int
@@ -88,6 +91,9 @@ let rec to_string = function
   | Cons (t1, t2) -> Printf.sprintf "%s :: %s" (to_string t1) (to_string t2)
   (* | Cons _ as c -> Printf.sprintf "[%s]" (list_to_string (to_ocaml_list c)) *)
   | Case (t1, t2, t3) -> Printf.sprintf "(case %s of | %s | %s)" (to_string t1) (to_string t2) (to_string t3)
+  | NilP -> "NilP"
+  | ConsP (t1, t2) -> Printf.sprintf "%s :P %s" (to_string t1) (to_string t2)
+  | CaseP (t1, t2, t3) -> Printf.sprintf "(caseP %s of | %s | %s)" (to_string t1) (to_string t2) (to_string t3)
 and info_to_string = function
   | IVar (_, name) -> name
   | IInt (_, x) -> Printf.sprintf "%d" x

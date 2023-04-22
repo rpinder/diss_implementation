@@ -134,8 +134,11 @@ let rec convert_mvar t pool env internal_seen term =
   | Ast.Bool _ as b -> b
   | Ast.Box t1 -> Ast.Box (convert_mvar t pool env internal_seen t1)
   | Ast.Nil -> Ast.Nil
+  | Ast.NilP -> Ast.NilP
   | Ast.Cons (t1, t2) -> Ast.Cons (convert_mvar t pool env internal_seen t1, convert_mvar t pool env internal_seen t2)
+  | Ast.ConsP (t1, t2) -> Ast.ConsP (convert_mvar t pool env internal_seen t1, convert_mvar t pool env internal_seen t2)
   | Ast.Case (t1, t2, t3) -> Ast.Case (convert_mvar t pool env internal_seen t1, convert_mvar t pool env internal_seen t2, convert_mvar t pool env internal_seen t3)
+  | Ast.CaseP (t1, t2, t3) -> Ast.CaseP (convert_mvar t pool env internal_seen t1, convert_mvar t pool env internal_seen t2, convert_mvar t pool env internal_seen t3)
   | Ast.LetBox (s, t1, t2) ->
      let internal' = Set.add internal_seen s in
      Ast.LetBox (s, convert_mvar t pool env internal_seen t1, convert_mvar t pool env internal' t2)
@@ -234,8 +237,8 @@ and eval t pool env term =
      Environment.define env' param arg';
      eval t pool env' body
   | Ast.App (t1, t2) ->
-     Out_channel.output_string Stdio.stdout ("APP : " ^ Ast.to_string t1 ^ " AND " ^ Ast.to_string t2 ^ "\n");
-     Out_channel.flush Stdio.stdout;
+     (* Out_channel.output_string Stdio.stdout ("APP : " ^ Ast.to_string t1 ^ " AND " ^ Ast.to_string t2 ^ "\n"); *)
+     (* Out_channel.flush Stdio.stdout; *)
      let t1 = mvar_or_not t pool (eval t pool env t1) in
      let t2 = eval t pool env t2 in
      eval t pool env (Ast.App (t1, t2))
@@ -297,9 +300,12 @@ and eval t pool env term =
          let obox = Ast.OBox x in
          let env' = Environment.createWithEnclosing env in
          Environment.define env' s obox;
-         Out_channel.output_string Stdio.stdout ("ffff: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout;
+         (* Out_channel.output_string Stdio.stdout ("ffff: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
          let res = eval t pool env' t2 in
-         Out_channel.output_string Stdio.stdout ("iiii: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; res 
+         (* Out_channel.output_string Stdio.stdout ("iiii: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *) res 
+      | Ast.OBox _ as ob ->
+         let x' = make_mvar t pool ob in
+         eval t pool env (Ast.LetBox (s, x', t2))
       | x -> let s = Printf.sprintf "%s is not a box" (Ast.to_string x) in raise (RuntimeError s))
   | Ast.Box t1 ->
      (* Out_channel.output_string Stdio.stdout ("box: " ^ Ast.to_string t1 ^ "\n"); Out_channel.flush Stdio.stdout; *)
@@ -333,6 +339,33 @@ and eval t pool env term =
         eval t pool env e2
      | Ast.OBox _ as b -> (* Out_channel.output_string Stdio.stdout "AAAAHHH\n"; Out_channel.flush Stdio.stdout; *) eval t pool env (Ast.Case (make_mvar t pool b, empty_case, other_case))
      | x -> raise (RuntimeError ("Non list type used in case: " ^ Ast.to_string x)))
+  | Ast.NilP -> Ast.NilP
+  | Ast.ConsP (e1, e2) ->
+     let e1' = eval t pool env e1 in
+     let e2' = match e2 with
+       | Ast.MVar _ as mv -> mv
+       | x -> eval t pool env x in 
+     let e2'' = (match e2' with
+       | Ast.MVar _ as mv -> mv
+       | Ast.Box x -> make_mvar t pool (Ast.OBox x)
+       | x -> raise (RuntimeError ("Incorrect argumen to ConsP: " ^ Ast.to_string x)))
+     in
+     Ast.ConsP (e1', e2'')
+  | Ast.CaseP (e1, empty_case, other_case) ->
+     let e1' = match mvar_or_not t pool e1 with
+       | Ast.MVar _ as mv -> mv
+       | x -> eval t pool env x
+     in
+     (match e1' with
+      | Ast.NilP ->
+         eval t pool env empty_case
+      | Ast.ConsP (a, b) ->
+        let other_case' = eval t pool env other_case in
+        let e2 = Ast.App (Ast.App (other_case', a), b) in
+        eval t pool env e2
+      | Ast.OBox _ as b -> eval t pool env (Ast.CaseP (make_mvar t pool b, empty_case, other_case))
+      | x -> raise (RuntimeError ("Non list type used in casep: " ^ Ast.to_string x)))
+
 
 let interpret n env term =
   let pool = T.setup_pool ~num_domains:n () in

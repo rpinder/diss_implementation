@@ -1,4 +1,4 @@
-fn main : list int =
+fn main : int =
   case 1 :: 2 :: nil of
-  | 3 :: 4 :: nil
-  | \y. \ys. ys
+  | 5
+  | \y. \ys. y

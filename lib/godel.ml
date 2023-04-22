@@ -1,5 +1,3 @@
-exception GodelError of string
-
 module Fresh : sig
   val gen : unit -> string
 end = struct
@@ -39,29 +37,13 @@ let rec transform term =
 (* LISTS *)
   | Ast.INil _ -> Ast.Box Ast.Nil
   | Ast.ICons (_, t1, t2) ->
-     let fresh1 = Fresh.gen () in
-     let fresh2 = Fresh.gen () in
-     Ast.LetBox (fresh1, transform t1, Ast.LetBox (fresh2, transform t2, Ast.Box (Ast.Cons (Ast.Box (Ast.Var fresh1), Ast.Var fresh2))))
+     Ast.Cons (Ast.Box (transform t1), transform t2)
   | Ast.ICase (_, t1, t2, t3) ->
-     let xs = Fresh.gen () in
-     (* let one = Fresh.gen () in *)
-     (* let two = Fresh.gen () in *)
-     (* let f' = Fresh.gen () in *)
-     (* let f'' = Fresh.gen () in *)
-     (* Ast.LetBox (xs, transform t1, Ast.Case (Ast.Var xs, transform t2, Ast.Abs (one, Ast.Abs (two, Ast.LetBox (f'', Ast.App (Ast.LetBox (f', transform t3, Ast.Var f'), Ast.Var one), Ast.App (Ast.Var f'', Ast.Var two)))))) *)
-     (* Let xs = Fresh.gen () in *)
-     (* let z = Fresh.gen () in *)
-     (* let zs = Fresh.gen () in *)
-     (* let other_case = in *)
-     (* Ast.LetBox (xs, transform t1, Ast.Case (Ast.Var xs, transform t2, other_case) *)
-     (match t3 with
-     | Ast.IAbs (_, y, Ast.IAbs (_, ys, q)) ->
-        let fresh1 = Fresh.gen () in
-        (* let fresh2 = Fresh.gen () in *)
-        let other_case = Ast.Abs (fresh1, Ast.LetBox (y, Ast.Var fresh1, Ast.Abs (ys, Ast.convert q)))in
-        Ast.LetBox (xs, transform t1, Ast.Case (Ast.Var xs, transform t2, other_case))
-     | _ -> raise (GodelError "Last term of case was not correct form"))
-     
+     let y = Fresh.gen () in
+     let ys = Fresh.gen () in
+     let f = Fresh.gen () in
+     let g = Fresh.gen () in
+     Ast.Case (transform t1, transform t2, Ast.Abs (y, Ast.Abs (ys, Ast.LetBox (f, transform t3, Ast.LetBox (g, Ast.App (Ast.Var f, Ast.Var y), Ast.App (Ast.Var g, Ast.Var ys))))))
   | Ast.ILet (_, s, t1, t2) -> Ast.LetBox (s, transform t1, transform t2)
   | _ -> failwith "Not yet implemented for godel transform"
 

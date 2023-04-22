@@ -1,4 +1,2 @@
-fn main : bool =
-  let box n <- box 5 in
-  let box y <- box 5 in
-  n != y
+fn main : int =
+  (\x. x + 5) 4

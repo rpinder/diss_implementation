@@ -17,6 +17,9 @@ type t =
   | Nil
   | Cons of t * t
   | Case of t * t * t
+  | NilP
+  | ConsP of t * t
+  | CaseP of t * t * t
 and infoAST =
   | IVar of info * string
   | IInt of info * int

@@ -1,8 +1,5 @@
 fn main : list int =
-  (* map (\x. x) (1 :: 2 :: 3 :: nil) *)
-  case 1 :: nil of
-  | 0
-  | \y. \ys. 7
+  map (\x. x) (1 :: 2 :: 3 :: nil) 
 
 fn sum xs : list int -> int =
   case xs of
@@ -12,4 +9,4 @@ fn sum xs : list int -> int =
 fn map f xs : (a -> b) -> list a -> list b =
   case xs of
   | nil
-  | \y. \ys. f y :: map f ys
+  | \y. \ys. f y :: map f ys 

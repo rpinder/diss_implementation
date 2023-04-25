@@ -56,4 +56,5 @@ val equal : t -> t -> bool
 val to_string : t -> string
 val info_to_string : infoAST -> string
 val convert : infoAST -> t
+val to_single_threaded : infoAST -> t
 

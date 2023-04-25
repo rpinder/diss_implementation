@@ -143,6 +143,25 @@ and convert (term : infoAST) : t =
   | INil _ -> Nil
   | ICons (_, t1, t2) -> Cons (convert t1, convert t2)
   | ICase (_, t1, t2, t3) -> Case (convert t1, convert t2, convert t3)
+and to_single_threaded (term : infoAST) : t =
+  match term with
+  | IVar (_, s) -> Var s
+  | IInt (_, i) -> Int i
+  | IBool (_, b) -> Bool b
+  | IAbs (_, s, t) -> Abs (s, to_single_threaded t)
+  | IApp (_, t1, t2) -> App (to_single_threaded t1, to_single_threaded t2)
+  | ILet (_, s, t1, t2) -> Let (s, to_single_threaded t1, to_single_threaded t2)
+  | IIf (_, t1, t2, t3) -> If (to_single_threaded t1, to_single_threaded t2, to_single_threaded t3)
+  | IBinOp (_, t1, t2, op) -> BinOp (to_single_threaded t1, to_single_threaded t2, op)
+  | IEq (_, t1, t2) -> Eq (to_single_threaded t1, to_single_threaded t2)
+  | INEq (_, t1, t2) -> NEq (to_single_threaded t1, to_single_threaded t2)
+  | ILetBox (_, s, t1, t2) -> Let (s, to_single_threaded t1, to_single_threaded t2)
+  | IBox (_, t) -> to_single_threaded t
+  | INil _ -> Nil
+  | ICons (_, t1, t2) -> Cons (to_single_threaded t1, to_single_threaded t2)
+  | ICase (_, t1, t2, t3) -> Case (to_single_threaded t1, to_single_threaded t2, to_single_threaded t3)
+
+
 
 
 let empty_info = { line_number = 0; column_number = 0 }

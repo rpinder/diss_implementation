@@ -23,7 +23,7 @@ let rec loop num_threads () =
 
 let run file num_threads godel =
   (* let transform_func = if godel then Godel.transform else Ast.convert in *)
-  let transform_func = if godel then Girard.transform else Ast.convert in
+  let transform_func = if godel then Godel.transform else if num_threads < 0 then Ast.to_single_threaded else Ast.convert in
   let inx = In_channel.create file in
   let lexbuf = Lexing.from_channel inx in
   let decls = 
@@ -38,11 +38,11 @@ let run file num_threads godel =
   let env = Environment.create () in
   (if godel then
      List.iter decls ~f:(fun (name, term, _) ->
-         (* let term' = (match transform_func term with *)
-                      (* | Ast.Box x -> x *)
-                      (* | x -> Ast.LetBox ("'res", x, Ast.Var "'res")) *)
-         (* in *)
-         let term' = transform_func term in
+         let term' = (match transform_func term with
+                      | Ast.Box x -> x
+                      | x -> Ast.LetBox ("'res", x, Ast.Var "'res"))
+         in
+         (* let term' = transform_func term in *)
          Environment.define env name ((Interpreter.optimize term')))
    else 
      List.iter decls ~f:(fun (name, term, _) -> Environment.define env name (transform_func term)));
@@ -56,7 +56,9 @@ let run file num_threads godel =
       (* if godel then *)
         (* Interpreter.interpret num_threads env (Ast.LetBox ("'res", main, Ast.Var "'res")) *)
       (* else *)
+      if num_threads > 0 then
         Interpreter.interpret num_threads env main
+      else Interpreter.interpret 0 env main
     in
     let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
     (* let str = ((Ast.to_string t')) in *)

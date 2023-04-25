@@ -15,7 +15,7 @@ fn fib n : int -> int =
   if n < 2 then n else
   fib (n - 1) + fib (n - 2)
 
-fn main : list (list int) =
-  let bxs = box 30 :: box 31 :: box 32 :: box 29 :: nil in
-  pmap (box (\x. x * 2 :: nil)) bxs
+fn main : list int =
+  let bxs = box 11 :: box 10 :: nil in
+  pmap (box fib) bxs
 

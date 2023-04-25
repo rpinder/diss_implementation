@@ -250,7 +250,7 @@ and eval t pool env term =
   | Ast.If (predicate, true_term, false_term) ->
      (match predicate with
       | Ast.Bool b ->
-         Out_channel.output_string Stdio.stdout (Ast.to_string predicate ^ ", going down -> " ^ Ast.to_string (if b then true_term else false_term) ^ "\n");
+         (* Out_channel.output_string Stdio.stdout (Ast.to_string predicate ^ ", going down -> " ^ Ast.to_string (if b then true_term else false_term) ^ "\n"); *)
          eval t pool env (if b then true_term else false_term)
       | pred ->
          let pred' = eval t pool env (mvar_or_not t pool pred) in
@@ -260,7 +260,7 @@ and eval t pool env term =
      let t2' = eval t pool env t2 in
      (match (t1', t2') with
       | (Ast.Int x, Ast.Int y) ->
-         Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ "\n");
+         (* Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ "\n"); *)
          eval_operator op x y
       | (x, y) -> eval t pool env (Ast.BinOp (mvar_or_not t pool x, mvar_or_not t pool y, op)))
       (* | _ ->
@@ -311,11 +311,11 @@ and eval t pool env term =
      (* Out_channel.output_string Stdio.stdout ("box: " ^ Ast.to_string t1 ^ "\n"); Out_channel.flush Stdio.stdout; *)
      let t1' = convert_mvar t pool env (Set.empty (module String)) t1 in
      Ast.Box t1' 
-  | Ast.OBox _ as x -> Out_channel.output_string Stdio.stdout ("gggg " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; x
+  | Ast.OBox _ as x -> (* Out_channel.output_string Stdio.stdout ("gggg " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *) x
      (* )let t1' = convert_mvar t env (Set.empty (module String)) t1 in
      Ast.OBox t1' *)
   | Ast.Nil ->
-     Out_channel.output_string Stdio.stdout "nil\n"; Out_channel.flush Stdio.stdout;
+     (* Out_channel.output_string Stdio.stdout "nil\n"; Out_channel.flush Stdio.stdout; *)
      Ast.Nil
   | Ast.Cons (e1, e2) ->
      (* Out_channel.output_string Stdio.stdout "cons\n"; Out_channel.flush Stdio.stdout; *)
@@ -342,20 +342,14 @@ and eval t pool env term =
   | Ast.NilP -> Ast.NilP
   | Ast.ConsP (e1, e2) ->
      let e1' = eval t pool env e1 in
-     let e2' = match e2 with
-       | Ast.MVar _ as mv -> mv
-       | x -> eval t pool env x in 
-     let e2'' = (match e2' with
-       | Ast.MVar _ as mv -> mv
-       | Ast.Box x -> make_mvar t pool (Ast.OBox x)
-       | x -> raise (RuntimeError ("Incorrect argumen to ConsP: " ^ Ast.to_string x)))
-     in
-     Ast.ConsP (e1', e2'')
+     let e2' = eval t pool env e2 in
+     Ast.Cons (e1', e2')
   | Ast.CaseP (e1, empty_case, other_case) ->
-     let e1' = match mvar_or_not t pool e1 with
-       | Ast.MVar _ as mv -> mv
-       | x -> eval t pool env x
-     in
+     (* let e1' = match mvar_or_not t pool e1 with *)
+     (*   | Ast.MVar _ as mv -> mv *)
+     (*   | x -> eval t pool env x *)
+     (* in *)
+     let e1' = mvar_or_not t pool e1 in
      (match e1' with
       | Ast.NilP ->
          eval t pool env empty_case

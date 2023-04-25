@@ -343,22 +343,21 @@ and eval t pool env term =
   | Ast.ConsP (e1, e2) ->
      let e1' = eval t pool env e1 in
      let e2' = eval t pool env e2 in
-     Ast.Cons (e1', e2')
+     Ast.ConsP (e1', e2')
   | Ast.CaseP (e1, empty_case, other_case) ->
-     (* let e1' = match mvar_or_not t pool e1 with *)
-     (*   | Ast.MVar _ as mv -> mv *)
-     (*   | x -> eval t pool env x *)
-     (* in *)
-     let e1' = mvar_or_not t pool e1 in
+     let e1' = eval t pool env (mvar_or_not t pool e1) in
      (match e1' with
       | Ast.NilP ->
          eval t pool env empty_case
-      | Ast.ConsP (a, b) ->
+     | Ast.ConsP (a, b) ->
         let other_case' = eval t pool env other_case in
+        (* let e2 = Ast.App (Ast.App (other_case', Ast.Box a), Ast.Box b) in *)
         let e2 = Ast.App (Ast.App (other_case', a), b) in
         eval t pool env e2
-      | Ast.OBox _ as b -> eval t pool env (Ast.CaseP (make_mvar t pool b, empty_case, other_case))
-      | x -> raise (RuntimeError ("Non list type used in casep: " ^ Ast.to_string x)))
+     | Ast.OBox _ as b -> (* Out_channel.output_string Stdio.stdout "AAAAHHH\n"; Out_channel.flush Stdio.stdout; *) eval t pool env (Ast.CaseP (make_mvar t pool b, empty_case, other_case))
+     | x -> raise (RuntimeError ("Non list type used in case: " ^ Ast.to_string x)))
+
+
 
 
 let interpret n env term =

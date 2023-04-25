@@ -46,7 +46,7 @@ let rec transform term =
      let ys' = Fresh.gen () in
      let f = Fresh.gen () in
      let g = Fresh.gen () in
-     let other_case = Ast.Abs (y, Ast.Abs (ys, Ast.LetBox (y', Ast.Var y, Ast.LetBox (ys', Ast.Var ys, Ast.LetBox (f, transform t3, Ast.LetBox (g, Ast.App (Ast.Var f, Ast.Box (Ast.Var y')), Ast.App (Ast.Var g, Ast.Box (Ast.Var (ys'))))))))) in
+     let other_case = Ast.Abs (y, Ast.Abs (ys, Ast.LetBox (y', Ast.Var y,Ast.LetBox (ys', Ast.Var ys, Ast.LetBox (f, transform t3, Ast.LetBox (g, Ast.App (Ast.Var f, Ast.Box (Ast.Var y')), Ast.App (Ast.Var g, Ast.Box (Ast.Var (ys'))))))))) in
      Ast.LetBox (xs, transform t1, Ast.Case (Ast.Var xs, transform t2, other_case))
   | Ast.ILet (_, s, t1, t2) -> Ast.LetBox (s, transform t1, transform t2)
   | _ -> failwith "Not yet implemented for godel transform"

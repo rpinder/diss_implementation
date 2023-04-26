@@ -19,7 +19,7 @@ fn main : int =
 fn callfunc : box int -> box int -> int =
   ((\x2. (let box a <- x2 in
   (box ((\x3. (let box b <- x3 in
-  (let box x4 <- (box ((a < 1))) in
+  (let box x4 <- (box ((a == 0))) in
   (if x4 then
     (box ((b + 1)))
    else

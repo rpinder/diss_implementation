@@ -147,6 +147,7 @@ and make_mvar t pool term =
   | Ast.OBox b ->
      let promise = T.async pool (fun _ -> eval t pool (Environment.create ()) b) in
      let count = Atomic.fetch_and_add t.counter 1 in
+     Out_channel.output_string Stdio.stdout ("MVAR " ^ Int.to_string count ^ " be " ^ Ast.to_string b ^ "\n"); Out_channel.flush Stdio.stdout;
      Error_checking_mutex.lock t.table_mutex;
      Hashtbl.set t.table ~key:count ~data:promise;
      Error_checking_mutex.unlock t.table_mutex;
@@ -217,17 +218,17 @@ and eval t pool env term =
                               (* Out_channel.output_string Stdio.stdout ("STARTING " ^ Int.to_string name ^ "\n"); *)
                               (* Out_channel.flush Stdio.stdout; *)
                               let res = T.await pool x in
-                              (* Out_channel.output_string Stdio.stdout "END\n"; *)
-                              (* Out_channel.flush Stdio.stdout; *)
+                              Out_channel.output_string Stdio.stdout ("MVar " ^ Int.to_string name ^ " became " ^ Ast.to_string res ^ "\n");
+                              Out_channel.flush Stdio.stdout;
                               res
                            | None -> Out_channel.output_string Stdio.stdout "NEVER HEARD OT HIS MAN IN MY LIFE\n"; Out_channel.flush Stdio.stdout;raise (RuntimeError ("Unknown MVAR")))
   | Ast.Int _ as x -> x
   | Ast.Bool _ as x -> x
   | Ast.Abs _ as x -> Ast.Cls (x, env)
   | Ast.Cls _ as x -> x
-  | Ast.App (Ast.Cls (Ast.Abs (param, body), closure), arg) ->
+  | Ast.App (Ast.Cls (Ast.Abs (param, body) as l , closure), arg) ->
      let arg' = eval t pool env arg in
-     (* Out_channel.output_string Stdio.stdout ("APP: " ^ Ast.to_string l ^ " and " ^ Ast.to_string arg ^ "\n"); Out_channel.flush Stdio.stdout; *)
+     Out_channel.output_string Stdio.stdout ("APP: " ^ Ast.to_string l ^ " and " ^ Ast.to_string arg ^ "\n"); Out_channel.flush Stdio.stdout;
      let env' = Environment.createWithEnclosing closure in
      Environment.define env' param arg';
      eval t pool env' body
@@ -255,12 +256,15 @@ and eval t pool env term =
      let t2' = eval t pool env t2 in
      (match (t1', t2') with
       | (Ast.Int x, Ast.Int y) ->
-         Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ "\n");
+         Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1, t2, op)) ^ " -> ");
+         Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ " -> ");
+         Out_channel.output_string Stdio.stdout (Ast.to_string (eval_operator op x y) ^ "\n");
          eval_operator op x y
-      | (x, y) -> eval t pool env (Ast.BinOp (mvar_or_not t pool x, mvar_or_not t pool y, op)))
-      (* | _ ->
-         let s = Printf.sprintf "%s and %s should be integers" (Ast.to_string t1') (Ast.to_string t2') in
-         raise (RuntimeError s)) *)
+      | (x, y) ->
+         eval t pool env (Ast.BinOp (mvar_or_not t pool x, mvar_or_not t pool y, op)))
+      (* | _ -> *)
+         (* let s = Printf.sprintf "%s and %s should be integers" (Ast.to_string t1') (Ast.to_string t2') in *)
+         (* raise (RuntimeError s)) *)
   | Ast.Eq (t1, t2) ->
      let t1' = eval t pool env t1 in
      let t2' = eval t pool env t2 in

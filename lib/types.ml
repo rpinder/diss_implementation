@@ -297,7 +297,7 @@ module Inference = struct
       in
       let empty_env = Map.empty (module Var) in
       List.iter decls ~f:(fun (name, term, _) ->
-          (* let term2 = Girard.transform term in *)
+          (* let term2 = Godel.transform term in *)
           (* Out_channel.output_string stdout ("\n" ^ name ^ "\n" ^ (Ast.to_string ((term2))) ^ "\n"); *)
           (* Out_channel.output_string stdout ("\n" ^ name ^ "\n" ^ (Ast.to_string (Interpreter.optimize (term2))) ^ "\n"); *)
           try 

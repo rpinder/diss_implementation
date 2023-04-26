@@ -30,65 +30,62 @@ let eval_operator op =
   | Ast.GreaterThan -> createbool (x > y)
   | Ast.LTEQ -> createbool (x <= y)
   | Ast.GTEQ -> createbool (x >= y)
+ 
 
-(* let rec replace_variable term v_old v_new = *)
-(*   match term with *)
-(*   | Ast.Var v when String.(=) v v_old -> Ast.Var v_new *)
-(*   | Ast.Var _ as v -> v *)
-(*   | Ast.LetBox (v, t1, t2) when String.(=) v v_old -> *)
-(*      Out_channel.output_string Stdio.stdout ("ONE -------------------------------\n"); Out_channel.flush Stdio.stdout; *)
-(*      Ast.LetBox (v, replace_variable t1 v_old v_new, t2) *)
-(*   | Ast.LetBox (v, t1, t2) when String.(=) v v_new -> *)
-(*      Out_channel.output_string Stdio.stdout ("TWO ------------------------------- \n"); Out_channel.flush Stdio.stdout; *)
-(*      Ast.LetBox (v_new, replace_variable t1 v_old v_new, t2) *)
-(*   | Ast.LetBox (v, t1, t2) -> *)
-(*      Out_channel.output_string Stdio.stdout ("THREEE\n"); Out_channel.flush Stdio.stdout; *)
-(*      Ast.LetBox (v, replace_variable t1 v_old v_new, replace_variable t2 v_old v_new) *)
-(*   | Ast.Abs (v, t1) when String.(=) v v_old -> *)
-(*      Out_channel.output_string Stdio.stdout ("ONEAAA -------------------------------\n"); Out_channel.flush Stdio.stdout; *)
-(*      Ast.Abs (v_new, t1) *)
-(*   | Ast.Abs (v, t1) when String.(=) v v_new -> *)
-(*      Out_channel.output_string Stdio.stdout ("TWOAAA -------------------------------\n"); Out_channel.flush Stdio.stdout; *)
-(*      Ast.Abs (v_new, t1) *)
-(*   | Ast.Abs (v, t1) -> Ast.Abs (v, replace_variable t1 v_old v_new) *)
-(*   | Ast.App (t1, t2) -> Ast.App (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new) *)
-(*   | Ast.BinOp (t1, t2, op) -> *)
-(*      Out_channel.output_string Stdio.stdout ("BINOP: " ^ Ast.to_string t1 ^ " and " ^ Ast.to_string t2 ^ "\n"); Out_channel.flush Stdio.stdout; *)
-(*      Ast.BinOp (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new, op) *)
-(*   | Ast.Eq (t1, t2) -> Ast.Eq (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new) *)
-(*   | Ast.NEq (t1, t2) -> Ast.NEq (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new) *)
-(*   | Ast.If (t1, t2, t3) -> Ast.If (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new, replace_variable t3 v_old v_new) *)
-(*   | Ast.Box x -> Ast.Box (replace_variable x v_old v_new) *)
-(*   | x -> *)
-(*      Out_channel.output_string Stdio.stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
-(*      x *)
-
-(* let rec replace_variable_term term v_old new_term = *)
-(*   match term with *)
-(*   | Ast.Var v when String.(=) v v_old -> new_term *)
-(*   | Ast.Var _ as v -> v *)
-(*   | Ast.LetBox (v, t1, t2) when String.(=) v v_old -> *)
-(*      Ast.LetBox (v, replace_variable_term t1 v_old new_term, t2) *)
-(*   | Ast.LetBox (v, t1, t2) -> *)
-(*      Ast.LetBox (v, replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term) *)
-(*   | Ast.Abs (v, t1) -> Ast.Abs (v, replace_variable_term t1 v_old new_term) *)
-(*   | Ast.App (t1, t2) -> Ast.App (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term) *)
-(*   | Ast.Eq (t1, t2) -> Ast.Eq (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term) *)
-(*   | Ast.NEq (t1, t2) -> Ast.NEq (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term) *)
-(*   | Ast.BinOp (t1, t2, op) -> *)
-(*      Out_channel.output_string Stdio.stdout ("BINOP: " ^ Ast.to_string t1 ^ " and " ^ Ast.to_string t2 ^ "\n"); Out_channel.flush Stdio.stdout; *)
-(*      Ast.BinOp (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, op) *)
-(*   | Ast.If (t1, t2, t3) -> Ast.If (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, replace_variable_term t3 v_old new_term) *)
-(*   | Ast.Box x -> Ast.Box (replace_variable_term x v_old new_term) *)
-(*   | x -> *)
-(*      Out_channel.output_string Stdio.stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
-(*      x *)
-
+let rec replace_variable term v_old v_new =
+  (* Out_channel.output_string Stdio.stdout ("Replace_variable " ^ v_old ^ " " ^ v_new ^  "\n"); Out_channel.flush Stdio.stdout; *)
+  match term with
+  | Ast.Var v when String.(=) v v_old -> Out_channel.output_string Stdio.stdout ("Replacing " ^ v_old ^ " with " ^ v_new ^ "\n"); Out_channel.flush Stdio.stdout; Ast.Var v_new
+  | Ast.Var _ as v -> v
+  | Ast.LetBox (v, t1, t2) ->
+     Out_channel.output_string Stdio.stdout ("THREEE\n"); Out_channel.flush Stdio.stdout;
+     Ast.LetBox (v, replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
+  | Ast.Abs (v, t1) when String.(=) v v_old ->
+     Out_channel.output_string Stdio.stdout ("ONEAAA -------------------------------\n"); Out_channel.flush Stdio.stdout;
+     Ast.Abs (v_old, t1)
+  | Ast.Abs (v, t1) when String.(=) v v_new ->
+     Out_channel.output_string Stdio.stdout ("TWOAAA -------------------------------\n"); Out_channel.flush Stdio.stdout;
+     Ast.Abs (v_new, t1)
+  | Ast.Abs (v, t1) -> Ast.Abs (v, replace_variable t1 v_old v_new)
+  | Ast.App (t1, t2) -> Ast.App (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
+  | Ast.BinOp (t1, t2, op) ->
+     (* Out_channel.output_string Stdio.stdout ("BINOP: " ^ Ast.to_string t1 ^ " and " ^ Ast.to_string t2 ^ "\n"); Out_channel.flush Stdio.stdout; *)
+     Ast.BinOp (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new, op)
+  | Ast.Eq (t1, t2) -> Ast.Eq (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
+  | Ast.NEq (t1, t2) -> Ast.NEq (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
+  | Ast.If (t1, t2, t3) -> Ast.If (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new, replace_variable t3 v_old v_new)
+  | Ast.Box x -> Ast.Box (replace_variable x v_old v_new)
+  | x ->
+     (* Out_channel.output_string Stdio.stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
+     x
+ 
+ 
+let rec replace_variable_term term v_old new_term =
+  match term with
+  | Ast.Var v when String.(=) v v_old -> new_term
+  | Ast.Var _ as v -> v
+  | Ast.LetBox (v, t1, t2) when String.(=) v v_old ->
+     Ast.LetBox (v, replace_variable_term t1 v_old new_term, t2)
+  | Ast.LetBox (v, t1, t2) ->
+     Ast.LetBox (v, replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.Abs (v, t1) -> Ast.Abs (v, replace_variable_term t1 v_old new_term)
+  | Ast.App (t1, t2) -> Ast.App (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.Eq (t1, t2) -> Ast.Eq (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.NEq (t1, t2) -> Ast.NEq (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.BinOp (t1, t2, op) ->
+     (* Out_channel.output_string Stdio.stdout ("BINOP: " ^ Ast.to_string t1 ^ " and " ^ Ast.to_string t2 ^ "\n"); Out_channel.flush Stdio.stdout; *)
+     Ast.BinOp (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, op)
+  | Ast.If (t1, t2, t3) -> Ast.If (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, replace_variable_term t3 v_old new_term)
+  | Ast.Box x -> Ast.Box (replace_variable_term x v_old new_term)
+  | x ->
+     (* Out_channel.output_string Stdio.stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
+     x
+ 
 let rec optimize term =
   match term with
-  (* | Ast.LetBox (v1, Ast.Box (Ast.Var v2), t2) -> optimize (replace_variable t2 v1 v2) *)
-  (* | Ast.LetBox (v1, Ast.Box (Ast.Int _ as i), t2) -> optimize (replace_variable_term t2 v1 i) *)
-  (* | Ast.LetBox (v1, Ast.Box (Ast.Bool _ as b), t2) -> optimize (replace_variable_term t2 v1 b) *)
+  | Ast.LetBox (v1, Ast.Box (Ast.Var v2), t2) -> optimize (replace_variable t2 v1 v2)
+  | Ast.LetBox (v1, Ast.Box (Ast.Int _ as i), t2) -> optimize (replace_variable_term t2 v1 i)
+  | Ast.LetBox (v1, Ast.Box (Ast.Bool _ as b), t2) -> optimize (replace_variable_term t2 v1 b)
   (* | Ast.LetBox (v1, Ast.Box (t), t2) -> Out_channel.output_string Stdio.stdout "AAAAAHHH\n"; Out_channel.flush Stdio.stdout; optimize (replace_variable_term t2 v1 t) (\* BIG EXPERIMENTAL *\) *)
   | Ast.LetBox (v1, t1, t2) -> Ast.LetBox (v1, optimize t1, optimize t2)
   | Ast.Box x -> Ast.Box (optimize x)
@@ -100,10 +97,8 @@ let rec optimize term =
   | Ast.If (pred, t1, t2) -> Ast.If (optimize pred, optimize t1, optimize t2)
   | Ast.App (t1, t2) -> Ast.App (optimize t1, optimize t2)
   | x ->
-     Out_channel.output_string Stdio.stdout ("OPTIMIZE FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout;
+     (* Out_channel.output_string Stdio.stdout ("OPTIMIZE FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
      x
-
-
 
 let rec convert_mvar t pool env internal_seen term =
   match term with
@@ -260,7 +255,7 @@ and eval t pool env term =
      let t2' = eval t pool env t2 in
      (match (t1', t2') with
       | (Ast.Int x, Ast.Int y) ->
-         (* Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ "\n"); *)
+         Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ "\n");
          eval_operator op x y
       | (x, y) -> eval t pool env (Ast.BinOp (mvar_or_not t pool x, mvar_or_not t pool y, op)))
       (* | _ ->

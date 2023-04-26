@@ -14,5 +14,5 @@ fn fold f init xs : (a -> b -> b) -> b -> list a -> b =
   | \y. \ys. f y (fold f init ys) 
 
 fn main : int =
-  (* reduce (\x. \y. x + y) 0 (3 :: 4 :: 1 :: 2 :: 1 :: nil) *)
   fold (\a. \b. a + b) 0 (3 :: 7 :: 2 :: 6 :: 4 :: 10 :: nil)
+

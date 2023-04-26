@@ -51,7 +51,7 @@ let run file num_threads godel =
     | None ->  failwith "No main function"
   in
   try
-    let typeof = Types.Inference.typecheck_program decls in
+    (* let typeof = Types.Inference.typecheck_program decls in *)
     let t' =
       (* if godel then *)
         (* Interpreter.interpret num_threads env (Ast.LetBox ("'res", main, Ast.Var "'res")) *)
@@ -60,8 +60,8 @@ let run file num_threads godel =
         Interpreter.interpret num_threads env main
       else Interpreter.interpret 0 env main
     in
-    let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in
-    (* let str = ((Ast.to_string t')) in *)
+    (* let str = ((Ast.to_string t') ^ "\n" ^ (Types.Typ.to_string typeof)) in *)
+    let str = ((Ast.to_string t')) in
     
     Out_channel.output_string stdout (str ^ "\n");
   with

@@ -13,7 +13,7 @@ type t =
   | NEq of t * t
   | LetBox of string * t * t
   | Box of t
-  | OBox of t
+  | OBox of t * int
   | Nil
   | Cons of t * t
   | Case of t * t * t

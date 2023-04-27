@@ -4,4 +4,4 @@ fn ackermann a b : int -> int -> int =
   else ackermann (a - 1) (ackermann a (b - 1)) 
 
 fn main : int =
-  ackermann 3 2
+  ackermann 3 3

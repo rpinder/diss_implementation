@@ -1,0 +1,78 @@
+Replacing 'x15 with sum
+
+sum
+(box ((\'x16. (let box xs <- 'x16 in
+(let box 'x17 <- (box (xs)) in
+(case 'x17 of | (box (0)) | (\'x18. (\'x19. (let box 'x20 <- 'x18 in
+(let box 'x21 <- 'x19 in
+(let box 'x22 <- (box ((\'x24. (let box y <- 'x24 in
+(box ((\'x25. (let box ys <- 'x25 in
+(let box 'x26 <- (box (y)) in
+(let box 'x27 <- (let box 'x28 <- (box (sum)) in
+('x28 (box (ys)))) in
+(box (('x26 + 'x27))))))))))))) in
+(let box 'x23 <- ('x22 (box ('x20))) in
+('x23 (box ('x21)))))))))))))))
+
+sum
+(box ((\'x16. (let box xs <- 'x16 in
+(case 'x17 of | (box (0)) | (\'x18. (\'x19. (let box 'x20 <- 'x18 in
+(let box 'x21 <- 'x19 in
+(let box 'x22 <- (box ((\'x24. (let box y <- 'x24 in
+(box ((\'x25. (let box ys <- 'x25 in
+(let box 'x26 <- (box (y)) in
+(let box 'x27 <- (let box 'x28 <- (box (sum)) in
+('x28 (box (ys)))) in
+(box (('x26 + 'x27))))))))))))) in
+(let box 'x23 <- ('x22 (box ('x20))) in
+('x23 (box ('x21))))))))))))))
+
+main
+(let box 'x29 <- (box (sum)) in
+('x29 (box ((box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))))))
+Replacing 'x29 with sum
+
+main
+(sum (box ((box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil)))))))))))))
+APP : sum
+AND
+(box ((box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))))
+
+
+sum is (\'x2. (let box xs <- 'x2 in
+(case 'x3 of | (box (0)) | (\'x4. (\'x5. (let box 'x6 <- 'x4 in
+(let box 'x7 <- 'x5 in
+(let box 'x8 <- (box ((\'x10. (let box y <- 'x10 in
+(box ((\'x11. (let box ys <- 'x11 in
+(let box 'x12 <- (box (y)) in
+(let box 'x13 <- (let box 'x14 <- (box (sum)) in
+('x14 (box (ys)))) in
+(box (('x12 + 'x13))))))))))))) in
+(let box 'x9 <- ('x8 (box ('x6))) in
+('x9 (box ('x7))))))))))))
+ABS
+MON
+box: (box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))
+boxFINISHED: (box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))
+box: (box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))
+boxFINISHED: (box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))
+APPC: (\'x2. (let box xs <- 'x2 in
+(case 'x3 of | (box (0)) | (\'x4. (\'x5. (let box 'x6 <- 'x4 in
+(let box 'x7 <- 'x5 in
+(let box 'x8 <- (box ((\'x10. (let box y <- 'x10 in
+(box ((\'x11. (let box ys <- 'x11 in
+(let box 'x12 <- (box (y)) in
+(let box 'x13 <- (let box 'x14 <- (box (sum)) in
+('x14 (box (ys)))) in
+(box (('x12 + 'x13))))))))))))) in
+(let box 'x9 <- ('x8 (box ('x6))) in
+('x9 (box ('x7))))))))))))
+and
+(box ((box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))))
+
+
+'x2 is (box ((box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))))
+box: (box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))
+boxFINISHED: (box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))
+ffff: (box (1)) :: (box ((box (2)) :: (box ((box (3)) :: (box ((box (4)) :: (box ((box (5)) :: (box (nil))))))))))
+MON

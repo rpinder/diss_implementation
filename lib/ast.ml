@@ -15,7 +15,7 @@ type t =
   | NEq of t * t
   | LetBox of string * t * t
   | Box of t
-  | OBox of t
+  | OBox of t * int
   | Nil
   | Cons of t * t
   | Case of t * t * t
@@ -77,16 +77,16 @@ let rec to_string = function
      let t2_s = to_string t2 in
      Printf.sprintf "(%s %s)" t1_s t2_s
   | Let (s, t1, t2) ->
-     Printf.sprintf "(let %s = %s in %s)" s (to_string t1) (to_string t2)
+     Printf.sprintf "(let %s = %s in\n%s)" s (to_string t1) (to_string t2)
   | Cls (abs, _) -> to_string abs
   | If (pred, t1, t2) ->
      Printf.sprintf "(if %s then %s else %s)" (to_string pred) (to_string t1) (to_string t2)
   | BinOp (t1, t2, op) -> Printf.sprintf "(%s %s %s)" (to_string t1) (op_to_string op) (to_string t2)
   | Eq (t1, t2) -> Printf.sprintf "(%s == %s)" (to_string t1) (to_string t2)
   | NEq (t1, t2) -> Printf.sprintf "(%s != %s)" (to_string t1) (to_string t2)
-  | LetBox (s, t1, t2) -> Printf.sprintf "(let box %s <- %s in %s)" s (to_string t1) (to_string t2)
+  | LetBox (s, t1, t2) -> Printf.sprintf "(let box %s <- %s in\n%s)" s (to_string t1) (to_string t2)
   | Box (t1) -> Printf.sprintf "(box (%s))" (to_string t1)
-  | OBox t1 -> Printf.sprintf "obox (%s)" (to_string t1)
+  | OBox (t1, c) -> Printf.sprintf "obox<%s> (%s)" (Int.to_string c) (to_string t1)
   | Nil -> "nil"
   | Cons (t1, t2) -> Printf.sprintf "%s :: %s" (to_string t1) (to_string t2)
   (* | Cons _ as c -> Printf.sprintf "[%s]" (list_to_string (to_ocaml_list c)) *)
@@ -105,13 +105,13 @@ and info_to_string = function
      let t2_s = info_to_string t2 in
      Printf.sprintf "(%s %s)" t1_s t2_s
   | ILet (_, s, t1, t2) ->
-     Printf.sprintf "(let %s = %s in %s)" s (info_to_string t1) (info_to_string t2)
+     Printf.sprintf "(let %s = %s in\n%s)" s (info_to_string t1) (info_to_string t2)
   | IIf (_, pred, t1, t2) ->
      Printf.sprintf "(if %s then %s else %s)" (info_to_string pred) (info_to_string t1) (info_to_string t2)
   | IBinOp (_, t1, t2, op) -> Printf.sprintf "(%s %s %s)" (info_to_string t1) (op_to_string op)(info_to_string t2)
   | IEq (_, t1, t2) -> Printf.sprintf "(%s == %s)" (info_to_string t1) (info_to_string t2)
   | INEq (_, t1, t2) -> Printf.sprintf "(%s != %s)" (info_to_string t1) (info_to_string t2)
-  | ILetBox (_, s, t1, t2) -> Printf.sprintf "(let box %s <- %s in %s)" s (info_to_string t1) (info_to_string t2)
+  | ILetBox (_, s, t1, t2) -> Printf.sprintf "(let box %s <- %s in\n%s)" s (info_to_string t1) (info_to_string t2)
   | IBox (_, t1) -> Printf.sprintf "box (%s)" (info_to_string t1)
   | INil _ -> "nil"
   | ICons _ as c -> Printf.sprintf "[%s]" (list_to_string (to_ocaml_list (convert c)))

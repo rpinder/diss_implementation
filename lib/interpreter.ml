@@ -35,16 +35,16 @@ let eval_operator op =
 let rec replace_variable term v_old v_new =
   (* Out_channel.output_string Stdio.stdout ("Replace_variable " ^ v_old ^ " " ^ v_new ^  "\n"); Out_channel.flush Stdio.stdout; *)
   match term with
-  | Ast.Var v when String.(=) v v_old -> Out_channel.output_string Stdio.stdout ("Replacing " ^ v_old ^ " with " ^ v_new ^ "\n"); Out_channel.flush Stdio.stdout; Ast.Var v_new
+  | Ast.Var v when String.(=) v v_old -> (* Out_channel.output_string Stdio.stdout ("Replacing " ^ v_old ^ " with " ^ v_new ^ "\n"); Out_channel.flush Stdio.stdout; *) Ast.Var v_new
   | Ast.Var _ as v -> v
   | Ast.LetBox (v, t1, t2) ->
-     Out_channel.output_string Stdio.stdout ("THREEE\n"); Out_channel.flush Stdio.stdout;
+     (* Out_channel.output_string Stdio.stdout ("THREEE\n"); Out_channel.flush Stdio.stdout; *)
      Ast.LetBox (v, replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
   | Ast.Abs (v, t1) when String.(=) v v_old ->
-     Out_channel.output_string Stdio.stdout ("ONEAAA -------------------------------\n"); Out_channel.flush Stdio.stdout;
+     (* Out_channel.output_string Stdio.stdout ("ONEAAA -------------------------------\n"); Out_channel.flush Stdio.stdout; *)
      Ast.Abs (v_old, t1)
   | Ast.Abs (v, t1) when String.(=) v v_new ->
-     Out_channel.output_string Stdio.stdout ("TWOAAA -------------------------------\n"); Out_channel.flush Stdio.stdout;
+     (* Out_channel.output_string Stdio.stdout ("TWOAAA -------------------------------\n"); Out_channel.flush Stdio.stdout; *)
      Ast.Abs (v_new, t1)
   | Ast.Abs (v, t1) -> Ast.Abs (v, replace_variable t1 v_old v_new)
   | Ast.App (t1, t2) -> Ast.App (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
@@ -54,6 +54,8 @@ let rec replace_variable term v_old v_new =
   | Ast.Eq (t1, t2) -> Ast.Eq (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
   | Ast.NEq (t1, t2) -> Ast.NEq (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new)
   | Ast.If (t1, t2, t3) -> Ast.If (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new, replace_variable t3 v_old v_new)
+  | Ast.Case (t1, t2, t3) -> Ast.Case (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new, replace_variable t3 v_old v_new)
+  | Ast.CaseP (t1, t2, t3) -> Ast.CaseP (replace_variable t1 v_old v_new, replace_variable t2 v_old v_new, replace_variable t3 v_old v_new)
   | Ast.Box x -> Ast.Box (replace_variable x v_old v_new)
   | x ->
      (* Out_channel.output_string Stdio.stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
@@ -76,6 +78,10 @@ let rec replace_variable_term term v_old new_term =
      (* Out_channel.output_string Stdio.stdout ("BINOP: " ^ Ast.to_string t1 ^ " and " ^ Ast.to_string t2 ^ "\n"); Out_channel.flush Stdio.stdout; *)
      Ast.BinOp (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, op)
   | Ast.If (t1, t2, t3) -> Ast.If (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, replace_variable_term t3 v_old new_term)
+  | Ast.Cons (t1, t2) -> Ast.Cons (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.ConsP (t1, t2) -> Ast.ConsP (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term)
+  | Ast.Case (t1, t2, t3) -> Ast.Case (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, replace_variable_term t3 v_old new_term)
+  | Ast.CaseP (t1, t2, t3) -> Ast.CaseP (replace_variable_term t1 v_old new_term, replace_variable_term t2 v_old new_term, replace_variable_term t3 v_old new_term)
   | Ast.Box x -> Ast.Box (replace_variable_term x v_old new_term)
   | x ->
      (* Out_channel.output_string Stdio.stdout ("FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
@@ -96,16 +102,23 @@ let rec optimize term =
   | Ast.NEq (t1, t2) -> Ast.NEq (optimize t1, optimize t2)
   | Ast.If (pred, t1, t2) -> Ast.If (optimize pred, optimize t1, optimize t2)
   | Ast.App (t1, t2) -> Ast.App (optimize t1, optimize t2)
+  | Ast.Cons (t1, t2) -> Ast.Cons (optimize t1, optimize t2)
+  | Ast.ConsP (t1, t2) -> Ast.ConsP (optimize t1, optimize t2)
+  | Ast.Case (t1, t2, t3) -> Ast.Case (optimize t1, optimize t2, optimize t3)
+  | Ast.CaseP (t1, t2, t3) -> Ast.CaseP (optimize t1, optimize t2, optimize t3)
   | x ->
      (* Out_channel.output_string Stdio.stdout ("OPTIMIZE FALLTHROUGH: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
      x
 
 let rec convert_mvar t pool env internal_seen term =
+     (* Out_channel.output_string Stdio.stdout ("CNVMVAR\n"); Out_channel.flush Stdio.stdout; *)
   match term with
   | Ast.MVar _ as v -> v
   | Ast.Var name as v -> (match Environment.get env name with
+                          | Some _ when Set.mem internal_seen name -> v
                                | Some (Ast.MVar _ as mv) -> mv
-                               | Some (Ast.OBox _ as b) -> make_mvar t pool b
+                               (* | Some (Ast.OBox _ as b) -> make_mvar t pool b *)
+                               | Some (Ast.OBox _ as obox) -> obox (* Ast.OBox (convert_mvar t pool env internal_seen b, c) *)
                                | _ when Option.is_some (Environment.get t.globals name) -> v
                                | _ ->
                                   if Set.mem internal_seen name then v
@@ -140,21 +153,24 @@ let rec convert_mvar t pool env internal_seen term =
   | Ast.If (cond, e1, e2) ->
      let f = convert_mvar t pool env internal_seen in
      Ast.If (f cond, f e1, f e2)
+  | Ast.OBox (b, c) -> Ast.OBox (convert_mvar t pool env internal_seen b, c)
   | x -> raise (RuntimeError ("convert_mvar not yet implemented for " ^ (Ast.to_string x)))
 
 and make_mvar t pool term = 
   match term with
-  | Ast.OBox b ->
-     let promise = T.async pool (fun _ -> eval t pool (Environment.create ()) b) in
-     let count = Atomic.fetch_and_add t.counter 1 in
-     Out_channel.output_string Stdio.stdout ("MVAR " ^ Int.to_string count ^ " be " ^ Ast.to_string b ^ "\n"); Out_channel.flush Stdio.stdout;
+  | Ast.OBox (b, count) ->
      Error_checking_mutex.lock t.table_mutex;
-     Hashtbl.set t.table ~key:count ~data:promise;
+     let found = Hashtbl.mem t.table count in
+     if found then () else (
+       let promise = T.async pool (fun _ -> eval t pool (Environment.create ()) b) in
+     (* Out_channel.output_string Stdio.stdout ("MVAR " ^ Int.to_string count ^ " be " ^ Ast.to_string b ^ "\n\n\n"); Out_channel.flush Stdio.stdout; *)
+       Hashtbl.set t.table ~key:count ~data:promise);
      Error_checking_mutex.unlock t.table_mutex;
      Ast.MVar count
- | t -> raise (RuntimeError ("make_mvar requires OBox but got " ^ (Ast.to_string t)))
+  | t -> raise (RuntimeError ("make_mvar requires OBox but got " ^ (Ast.to_string t)))
 
 and mvar_or_not t pool term =
+  (* Out_channel.output_string Stdio.stdout "MON\n"; Out_channel.flush Stdio.stdout; *)
   match term with
   | Ast.OBox _ as b -> make_mvar t pool b
   | x -> x
@@ -162,7 +178,7 @@ and mvar_or_not t pool term =
 and force_obox t pool term =
   match term with
   | Ast.Nil -> Ast.Nil
-  | Ast.OBox b -> force_obox t pool (eval t pool (Environment.create ()) b)
+  | Ast.OBox (b, _) -> force_obox t pool (eval t pool (Environment.create ()) b)
   | Ast.Cons (t1, t2) ->
      let t1 = T.async pool (fun _ -> force_obox t pool t1) in
      let t2 = T.async pool (fun _ -> force_obox t pool t2) in
@@ -196,10 +212,12 @@ and eval t pool env term =
   match term with
   | Ast.Var name -> (match Environment.get env name with
                           | Some (Ast.MVar _ as mv) ->
+                             (* Out_channel.output_string Stdio.stdout (name ^ " is " ^ Ast.to_string mv ^ "\n"); Out_channel.flush Stdio.stdout; *)
                              (* Out_channel.output_string Stdio.stdout ("FIRST: " ^ name ^ "\n"); *)
                              (* Out_channel.flush Stdio.stdout; *)
                              eval t pool env mv
                           | Some x ->
+                             (* Out_channel.output_string Stdio.stdout (name ^ " is " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
                              (* Out_channel.output_string Stdio.stdout "SECOND\n"; *)
                              (* Out_channel.flush Stdio.stdout; *)
                              eval t pool env x
@@ -218,22 +236,24 @@ and eval t pool env term =
                               (* Out_channel.output_string Stdio.stdout ("STARTING " ^ Int.to_string name ^ "\n"); *)
                               (* Out_channel.flush Stdio.stdout; *)
                               let res = T.await pool x in
-                              Out_channel.output_string Stdio.stdout ("MVar " ^ Int.to_string name ^ " became " ^ Ast.to_string res ^ "\n");
-                              Out_channel.flush Stdio.stdout;
+                              (* Out_channel.output_string Stdio.stdout ("MVar " ^ Int.to_string name ^ " became " ^ Ast.to_string res ^ "\n\n\n"); *)
+                              (* Out_channel.flush Stdio.stdout; *)
                               res
                            | None -> Out_channel.output_string Stdio.stdout "NEVER HEARD OT HIS MAN IN MY LIFE\n"; Out_channel.flush Stdio.stdout;raise (RuntimeError ("Unknown MVAR")))
   | Ast.Int _ as x -> x
   | Ast.Bool _ as x -> x
-  | Ast.Abs _ as x -> Ast.Cls (x, env)
+  | Ast.Abs _ as x ->
+     (* Out_channel.output_string Stdio.stdout "ABS\n";Out_channel.flush Stdio.stdout; *)
+     Ast.Cls (x, env)
   | Ast.Cls _ as x -> x
-  | Ast.App (Ast.Cls (Ast.Abs (param, body) as l , closure), arg) ->
+  | Ast.App (Ast.Cls (Ast.Abs (param, body), closure), arg) ->
      let arg' = eval t pool env arg in
-     Out_channel.output_string Stdio.stdout ("APP: " ^ Ast.to_string l ^ " and " ^ Ast.to_string arg ^ "\n"); Out_channel.flush Stdio.stdout;
+     (* Out_channel.output_string Stdio.stdout ("APPC: " ^ Ast.to_string l ^ "\nand\n" ^ Ast.to_string arg ^ "\n\n\n"); Out_channel.flush Stdio.stdout; *)
      let env' = Environment.createWithEnclosing closure in
      Environment.define env' param arg';
      eval t pool env' body
   | Ast.App (t1, t2) ->
-     (* Out_channel.output_string Stdio.stdout ("APP : " ^ Ast.to_string t1 ^ " AND " ^ Ast.to_string t2 ^ "\n"); *)
+     (* Out_channel.output_string Stdio.stdout ("APP : " ^ Ast.to_string t1 ^ "\nAND\n" ^ Ast.to_string t2 ^ "\n\n\n"); *)
      (* Out_channel.flush Stdio.stdout; *)
      let t1 = mvar_or_not t pool (eval t pool env t1) in
      let t2 = eval t pool env t2 in
@@ -249,18 +269,29 @@ and eval t pool env term =
          (* Out_channel.output_string Stdio.stdout (Ast.to_string predicate ^ ", going down -> " ^ Ast.to_string (if b then true_term else false_term) ^ "\n"); *)
          eval t pool env (if b then true_term else false_term)
       | pred ->
+         (* Out_channel.output_string Stdio.stdout "AAA\n"; Out_channel.flush Stdio.stdout; *)
          let pred' = eval t pool env (mvar_or_not t pool pred) in
          eval t pool env (Ast.If (pred', true_term, false_term)))
+     (* let predicate' = eval t pool env predicate in
+     let true_term' = eval t pool env true_term in
+     let false_term' = eval t pool env false_term in
+     (match predicate' with
+      | Ast.Bool b ->
+         eval t pool env (if b then true_term' else false_term')
+      | ob ->
+         (* Out_channel.output_string Stdio.stdout (Ast.to_string ob ^ "+++++++\n"); Out_channel.flush Stdio.stdout; *)
+         eval t pool env (Ast.If (mvar_or_not t pool ob, true_term', false_term'))) *)
   | Ast.BinOp (t1, t2, op) ->
      let t1' = eval t pool env t1 in
      let t2' = eval t pool env t2 in
      (match (t1', t2') with
       | (Ast.Int x, Ast.Int y) ->
-         Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1, t2, op)) ^ " -> ");
-         Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ " -> ");
-         Out_channel.output_string Stdio.stdout (Ast.to_string (eval_operator op x y) ^ "\n");
+         (* Out_channel.output_string Stdio.stdout (">>" ^ Ast.to_string (Ast.BinOp (t1, t2, op)) ^ " -> "); *)
+         (* Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.BinOp (t1', t2', op)) ^ " -> "); *)
+         (* Out_channel.output_string Stdio.stdout (Ast.to_string (eval_operator op x y) ^ "\n"); *)
          eval_operator op x y
       | (x, y) ->
+         (* Out_channel.output_string Stdio.stdout "BBB\n"; Out_channel.flush Stdio.stdout; *)
          eval t pool env (Ast.BinOp (mvar_or_not t pool x, mvar_or_not t pool y, op)))
       (* | _ -> *)
          (* let s = Printf.sprintf "%s and %s should be integers" (Ast.to_string t1') (Ast.to_string t2') in *)
@@ -272,13 +303,18 @@ and eval t pool env term =
      | (Ast.OBox _, _) | (_, Ast.OBox _) ->
         let o1 = mvar_or_not t pool t1' in
         let o2 = mvar_or_not t pool t2' in
+        (* Out_channel.output_string Stdio.stdout (">>" ^ Ast.to_string t1' ^ "\n===\n" ^ Ast.to_string t2' ^ "\n\n\n"); Out_channel.flush Stdio.stdout; *)
         eval t pool env (Ast.Eq (o1, o2))
      | _ ->
+        (* Out_channel.output_string Stdio.stdout (">>" ^ Ast.to_string (Ast.Eq (t1, t2)) ^ " -> "); *)
+        (* Out_channel.output_string Stdio.stdout (Ast.to_string (Ast.Eq (t1', t2')) ^ " -> "); *)
+        (* Out_channel.output_string Stdio.stdout (Bool.to_string (Ast.equal t1' t2') ^ "\n\n\n"); *)
         if Ast.equal t1' t2' then
           Ast.Bool true
         else
           Ast.Bool false)
   | Ast.NEq (t1, t2) ->
+         (* Out_channel.output_string Stdio.stdout "DDD\n"; Out_channel.flush Stdio.stdout; *)
      let t1' = eval t pool env t1 in
      let t2' = eval t pool env t2 in
      (match (t1', t2') with
@@ -296,12 +332,13 @@ and eval t pool env term =
      (* Out_channel.flush Stdio.stdout; *)
      (match eval t pool env t1 with
       | Ast.Box x -> 
-         let obox = Ast.OBox x in
+         let count = Atomic.fetch_and_add t.counter 1 in
+         let obox = Ast.OBox (x, count) in
          let env' = Environment.createWithEnclosing env in
          Environment.define env' s obox;
          (* Out_channel.output_string Stdio.stdout ("ffff: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *)
          let res = eval t pool env' t2 in
-         (* Out_channel.output_string Stdio.stdout ("iiii: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *) res 
+         (* Out_channel.output_string Stdio.stdout ("iiii: " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *) res
       | Ast.OBox _ as ob ->
          let x' = make_mvar t pool ob in
          eval t pool env (Ast.LetBox (s, x', t2))
@@ -309,6 +346,7 @@ and eval t pool env term =
   | Ast.Box t1 ->
      (* Out_channel.output_string Stdio.stdout ("box: " ^ Ast.to_string t1 ^ "\n"); Out_channel.flush Stdio.stdout; *)
      let t1' = convert_mvar t pool env (Set.empty (module String)) t1 in
+     (* Out_channel.output_string Stdio.stdout ("boxFINISHED: " ^ Ast.to_string t1 ^ "\n"); Out_channel.flush Stdio.stdout; *)
      Ast.Box t1' 
   | Ast.OBox _ as x -> (* Out_channel.output_string Stdio.stdout ("gggg " ^ Ast.to_string x ^ "\n"); Out_channel.flush Stdio.stdout; *) x
      (* )let t1' = convert_mvar t env (Set.empty (module String)) t1 in

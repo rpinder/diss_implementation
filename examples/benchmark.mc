@@ -1,4 +1,4 @@
-(* fn map f xs : (a -> b) -> list a -> list b =
+fn map f xs : (a -> b) -> list a -> list b =
   case xs of
   | nil
   | \y. \ys. f y :: map f ys
@@ -7,7 +7,7 @@ fn filter f xs : (a -> bool) -> list a -> list a =
   case xs of
   | nil
   | \y. \ys. if f y then y :: filter f ys else filter f ys
-  *)
+ 
 
 fn list_to x : int -> list int =
   if x == 0 then nil
@@ -15,18 +15,17 @@ fn list_to x : int -> list int =
  
 
 fn reverse xs : list a -> list a =
-  reverse_helper nil xs
+  reverse_helper xs nil
 
-fn reverse_helper acc xs : list a -> list a -> list a =
+fn reverse_helper xs acc : list a -> list a -> list a =
   case xs of
   | acc
-  | \y. \ys. reverse_helper (y :: acc) ys
+  | \y. \ys. reverse_helper ys (y :: acc)
 
 fn sum xs : list int -> int = 
   case xs of
   | 0
   | \y. \ys. y + sum ys 
 
-fn main : list int =
-(*  sum (reverse (list_to 5)) *)
-  list_to 5
+fn main : int =
+  sum (map (\x. x * x) (filter (\x. x > 2) (reverse (list_to 200)))) 

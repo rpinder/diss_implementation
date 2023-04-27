@@ -297,9 +297,12 @@ module Inference = struct
       in
       let empty_env = Map.empty (module Var) in
       List.iter decls ~f:(fun (name, term, _) ->
-          (* let term2 = Godel.transform term in *)
-          (* Out_channel.output_string stdout ("\n" ^ name ^ "\n" ^ (Ast.to_string ((term2))) ^ "\n"); *)
-          (* Out_channel.output_string stdout ("\n" ^ name ^ "\n" ^ (Ast.to_string (Interpreter.optimize (term2))) ^ "\n"); *)
+          let term2 = Girard.transform term in
+          Out_channel.output_string stdout ("\n" ^ name ^ " Girard Noptimized\n" ^ (Ast.to_string ((term2))) ^ "\n");
+          Out_channel.output_string stdout ("\n" ^ name ^ " Girard Optimized\n" ^ (Ast.to_string (Interpreter.optimize (term2))) ^ "\n");
+          let term3 = Godel.transform term in
+          Out_channel.output_string stdout ("\n" ^ name ^ " Godel Noptimized\n" ^ (Ast.to_string ((term3))) ^ "\n");
+          Out_channel.output_string stdout ("\n" ^ name ^ " Godel Optimized\n" ^ (Ast.to_string (Interpreter.optimize (term3))) ^ "\n");
           try 
           let t = create () in
           let typ = infer t globalenv empty_env term in
